@@ -24,8 +24,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ── API Routes (will be added in next stages) ─────────────────────────────────
-// Stage 3: app.use('/api/v1/logs',      require('./routes/logs.routes'));
+// ── API Routes ────────────────────────────────────────────────────────────────
+app.use('/api/v1/logs', require('./routes/logs.routes'));
 // Stage 4: app.use('/api/v1/auth',      require('./routes/auth.routes'));
 // Stage 4: app.use('/api/v1/dashboard', require('./routes/dashboard.routes'));
 
