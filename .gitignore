@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment variables (NEVER commit!)
+.env
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# PDF files (diploma documents, not part of the codebase)
+*.pdf
+
+# IDE
+.vscode/
+.idea/
+
+# Docker volumes (local)
+postgres_data/
