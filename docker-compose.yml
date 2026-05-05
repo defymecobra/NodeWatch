@@ -25,6 +25,8 @@ services:
     container_name: nodewatch_backend
     restart: unless-stopped
     env_file: .env
+    environment:
+      - DB_HOST=nodewatch_db
     ports:
       - "3000:3000"
     depends_on:

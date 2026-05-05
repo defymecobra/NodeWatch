@@ -5,6 +5,7 @@
  * POST /api/v1/logs — receive a single log entry
  */
 const { processLog } = require('../services/deduplication');
+const { processAlerts } = require('../services/alerts');
 
 // Valid log levels
 const VALID_LEVELS = ['info', 'warn', 'error', 'critical'];
@@ -61,6 +62,13 @@ const ingestLog = async (req, res, next) => {
 
     // 201 = new record, 200 = duplicate incremented
     const statusCode = result.isDuplicate ? 200 : 201;
+
+    // Asynchronously process alerts (don't block the API response)
+    processAlerts(
+      { id: req.projectId, name: req.projectName },
+      result.log,
+      result.isDuplicate
+    ).catch((err) => console.error('Alert processing error:', err));
 
     res.status(statusCode).json({
       success: true,
