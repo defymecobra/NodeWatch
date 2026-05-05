@@ -25,9 +25,9 @@ app.get('/health', (req, res) => {
 });
 
 // ── API Routes ────────────────────────────────────────────────────────────────
-app.use('/api/v1/logs', require('./routes/logs.routes'));
-// Stage 4: app.use('/api/v1/auth',      require('./routes/auth.routes'));
-// Stage 4: app.use('/api/v1/dashboard', require('./routes/dashboard.routes'));
+app.use('/api/v1/logs',      require('./routes/logs.routes'));
+app.use('/api/v1/auth',      require('./routes/auth.routes'));
+app.use('/api/v1/dashboard', require('./routes/dashboard.routes'));
 
 // ── 404 & Error Handlers (must be LAST) ──────────────────────────────────────
 app.use(notFound);

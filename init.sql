@@ -101,12 +101,13 @@ CREATE TABLE IF NOT EXISTS alert_configs (
 -- ================================================
 
 -- Default admin user (password: 'admin123')
--- Hash generated with bcrypt, 10 rounds
+-- IMPORTANT: This hash was generated with Node.js bcrypt (10 rounds).
+-- To regenerate: node -e "require('bcrypt').hash('admin123',10).then(h=>console.log(h))"
 INSERT INTO users (id, email, password_hash, role)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'admin@nodewatch.local',
-    '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0/pCOBBWGLS', -- admin123
+    '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', -- admin123
     'admin'
 ) ON CONFLICT (email) DO NOTHING;
 
