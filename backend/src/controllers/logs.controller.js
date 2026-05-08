@@ -88,4 +88,84 @@ const ingestLog = async (req, res, next) => {
   }
 };
 
-module.exports = { ingestLog };
+/**
+ * POST /api/v1/logs/test
+ *
+ * Generates a random test error event for a given project.
+ * Requires JWT authentication (used from the dashboard UI).
+ *
+ * Body: { project_id }
+ */
+const db = require('../db');
+
+const TEST_EVENTS = [
+  { level: 'critical', message: 'Database connection pool exhausted: max connections reached', payload: { stack: 'Error: Connection pool exhausted\n    at Pool.connect (pg-pool/index.js:45:11)', env: 'production' } },
+  { level: 'error', message: 'TypeError: Cannot read properties of null (reading "id")', payload: { stack: 'TypeError: Cannot read properties of null\n    at UserService.getProfile (services/user.js:28:15)', file: 'services/user.js', line: 28 } },
+  { level: 'error', message: 'ECONNREFUSED: Redis connection refused at 127.0.0.1:6379', payload: { stack: 'Error: connect ECONNREFUSED 127.0.0.1:6379\n    at TCPConnectWrap.afterConnect', service: 'cache' } },
+  { level: 'warn', message: 'Request rate limit exceeded for IP 192.168.1.100', payload: { ip: '192.168.1.100', endpoint: '/api/v1/auth/login', limit: '100/min' } },
+  { level: 'error', message: 'JWT token verification failed: invalid signature', payload: { stack: 'JsonWebTokenError: invalid signature\n    at verify (jsonwebtoken/verify.js:75:17)', header: 'Bearer eyJhbGci...' } },
+  { level: 'critical', message: 'Out of memory: heap allocation failed', payload: { heapUsed: '1.9GB', heapTotal: '2.0GB', rss: '2.1GB' } },
+  { level: 'warn', message: 'Deprecated API endpoint /v1/users/legacy called', payload: { caller: 'mobile-app-v2.3', replacement: '/v2/users' } },
+  { level: 'info', message: 'Scheduled backup completed successfully', payload: { duration: '12.5s', size: '256MB', destination: 's3://backups/' } },
+  { level: 'error', message: 'File upload failed: payload too large (max 10MB)', payload: { fileSize: '25MB', fileName: 'report.pdf', mimeType: 'application/pdf' } },
+  { level: 'critical', message: 'SSL certificate expires in 2 days', payload: { domain: 'api.example.com', expiresAt: '2026-05-10T00:00:00Z' } },
+];
+
+const generateTestEvent = async (req, res, next) => {
+  try {
+    const { project_id } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Field "project_id" is required.',
+      });
+    }
+
+    // Verify project exists
+    const projectCheck = await db.query(
+      `SELECT id, name FROM projects WHERE id = $1`,
+      [project_id]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Project not found.',
+      });
+    }
+
+    // Pick a random test event
+    const event = TEST_EVENTS[Math.floor(Math.random() * TEST_EVENTS.length)];
+
+    // Process it through the normal deduplication pipeline
+    const result = await processLog({
+      project_id,
+      level: event.level,
+      message: event.message,
+      payload: event.payload,
+    });
+
+    // Trigger alerts asynchronously
+    processAlerts(
+      { id: project_id, name: projectCheck.rows[0].name },
+      result.log,
+      result.isDuplicate
+    ).catch((err) => console.error('Alert processing error:', err));
+
+    res.status(201).json({
+      success: true,
+      isDuplicate: result.isDuplicate,
+      log: {
+        id:               result.log.id,
+        level:            result.log.level,
+        message:          result.log.message,
+        occurrence_count: result.log.occurrence_count,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { ingestLog, generateTestEvent };

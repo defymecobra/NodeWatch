@@ -1,18 +1,19 @@
 /**
  * NodeWatch - Log Routes
  *
- * POST /api/v1/logs  — ingest a new log entry (requires X-API-Key)
+ * POST /api/v1/logs       — ingest a new log entry (requires X-API-Key)
+ * POST /api/v1/logs/test  — generate a test event (requires JWT, from dashboard)
  */
 const { Router }        = require('express');
-const { validateApiKey } = require('../middleware/auth');
-const { ingestLog }      = require('../controllers/logs.controller');
+const { validateApiKey, validateJwt } = require('../middleware/auth');
+const { ingestLog, generateTestEvent } = require('../controllers/logs.controller');
 
 const router = Router();
 
-// All log routes require a valid API key
-router.use(validateApiKey);
+// Test event generation — uses JWT auth (from dashboard UI)
+router.post('/test', validateJwt, generateTestEvent);
 
-// POST /api/v1/logs
-router.post('/', ingestLog);
+// All other log routes require a valid API key
+router.post('/', validateApiKey, ingestLog);
 
 module.exports = router;

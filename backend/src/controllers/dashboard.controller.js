@@ -122,12 +122,12 @@ const getStats = async (req, res, next) => {
 };
 
 /**
- * GET /api/v1/dashboard/logs?project_id=UUID&page=1&limit=20&level=error
- * Returns a paginated list of error logs.
+ * GET /api/v1/dashboard/logs?project_id=UUID&page=1&limit=20&level=error&sort_by=last_seen_at&sort_order=desc&search=keyword
+ * Returns a paginated list of error logs with sorting and search.
  */
 const getLogs = async (req, res, next) => {
   try {
-    const { project_id, level } = req.query;
+    const { project_id, level, search, sort_by, sort_order } = req.query;
     const page  = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const offset = (page - 1) * limit;
@@ -148,7 +148,17 @@ const getLogs = async (req, res, next) => {
       params.push(level);
     }
 
+    if (search && search.trim()) {
+      conditions.push(`message ILIKE $${params.length + 1}`);
+      params.push(`%${search.trim()}%`);
+    }
+
     const whereClause = conditions.join(' AND ');
+
+    // Validate sort parameters
+    const allowedSortColumns = ['level', 'message', 'occurrence_count', 'created_at', 'last_seen_at'];
+    const sortColumn = allowedSortColumns.includes(sort_by) ? sort_by : 'last_seen_at';
+    const sortDirection = sort_order === 'asc' ? 'ASC' : 'DESC';
 
     // Get total count for pagination
     const countResult = await db.query(
@@ -156,12 +166,12 @@ const getLogs = async (req, res, next) => {
       params
     );
 
-    // Get paginated logs
+    // Get paginated logs with sorting
     const logsResult = await db.query(
       `SELECT id, level, message, error_hash, occurrence_count, created_at, last_seen_at
        FROM error_logs
        WHERE ${whereClause}
-       ORDER BY last_seen_at DESC
+       ORDER BY ${sortColumn} ${sortDirection}
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
