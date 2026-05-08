@@ -8,10 +8,13 @@ const Sidebar = () => {
   const { logout, user } = useAuth();
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Incidents', path: '/incidents', icon: AlertCircle },
-    { name: 'Settings', path: '/settings', icon: SettingsIcon },
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['admin', 'developer', 'guest'] },
+    { name: 'Incidents', path: '/incidents', icon: AlertCircle, roles: ['admin', 'developer', 'guest'] },
+    { name: 'Settings', path: '/settings', icon: SettingsIcon, roles: ['admin', 'developer'] },
   ];
+
+  // Filter nav items based on user role
+  const visibleItems = navItems.filter(item => item.roles.includes(user?.role));
 
   return (
     <aside className="w-64 bg-dark-900 border-r border-slate-800 flex flex-col h-screen fixed top-0 left-0">
@@ -25,10 +28,11 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <NavLink
             key={item.name}
             to={item.path}
+            end={item.path === '/'}
             className={({ isActive }) =>
               clsx(
                 'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',

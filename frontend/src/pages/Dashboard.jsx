@@ -3,6 +3,7 @@ import client from '../api/client';
 import StatsCard from '../components/StatsCard';
 import ErrorsChart from '../components/ErrorsChart';
 import IncidentsTable from '../components/IncidentsTable';
+import TestEventButton from '../components/TestEventButton';
 import { AlertTriangle, Activity, DatabaseZap, Clock } from 'lucide-react';
 
 const Dashboard = () => {
@@ -10,6 +11,7 @@ const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch projects on mount
   useEffect(() => {
@@ -50,7 +52,7 @@ const Dashboard = () => {
     // Auto-refresh every 30 seconds
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
-  }, [selectedProjectId]);
+  }, [selectedProjectId, refreshKey]);
 
   return (
     <div className="space-y-6">
@@ -61,11 +63,12 @@ const Dashboard = () => {
           <p className="text-slate-400 text-sm mt-1">Real-time error monitoring and analytics</p>
         </div>
         
-        <div>
+        <div className="flex items-center gap-3">
+          <TestEventButton projectId={selectedProjectId} onEventSent={() => setRefreshKey(k => k + 1)} />
           <select
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="bg-dark-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full p-2.5 outline-none"
+            className="bg-dark-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none"
             disabled={projects.length === 0}
           >
             {projects.length === 0 ? (
@@ -115,12 +118,12 @@ const Dashboard = () => {
 
           {/* Main Chart */}
           <div className="glass-panel p-6">
-            <h2 className="text-lg font-semibold text-white mb-6">Error Frequency (Last 24 Hours)</h2>
+            <h2 className="text-lg font-semibold text-white mb-6">Error Frequency (All Time)</h2>
             <ErrorsChart data={stats.timeline_24h} />
           </div>
 
           {/* Incidents Table */}
-          <IncidentsTable projectId={selectedProjectId} />
+          <IncidentsTable projectId={selectedProjectId} refreshKey={refreshKey} />
         </>
       ) : null}
     </div>

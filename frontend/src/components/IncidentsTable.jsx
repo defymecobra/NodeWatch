@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import client from '../api/client';
 import { format, parseISO } from 'date-fns';
 import clsx from 'clsx';
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const LevelBadge = ({ level }) => {
@@ -20,19 +20,53 @@ const LevelBadge = ({ level }) => {
   );
 };
 
-const IncidentsTable = ({ projectId }) => {
+const SortIcon = ({ column, sortBy, sortOrder }) => {
+  if (sortBy !== column) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 opacity-40" />;
+  return sortOrder === 'asc'
+    ? <ArrowUp className="w-3.5 h-3.5 ml-1 text-brand-400" />
+    : <ArrowDown className="w-3.5 h-3.5 ml-1 text-brand-400" />;
+};
+
+const IncidentsTable = ({ projectId, level, search, refreshKey }) => {
   const [logs, setLogs] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState('last_seen_at');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('desc');
+    }
+    setPage(1);
+  };
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [level, search]);
 
   useEffect(() => {
     if (!projectId) return;
 
     const fetchLogs = async () => {
-      setIsLoading(true);
+      if (logs.length === 0) setIsLoading(true);
       try {
-        const res = await client.get(`/dashboard/logs?project_id=${projectId}&page=${page}&limit=10`);
+        const params = new URLSearchParams({
+          project_id: projectId,
+          page: page.toString(),
+          limit: '10',
+          sort_by: sortBy,
+          sort_order: sortOrder,
+        });
+        if (level) params.set('level', level);
+        if (search) params.set('search', search);
+
+        const res = await client.get(`/dashboard/logs?${params.toString()}`);
         if (res.data.success) {
           setLogs(res.data.logs);
           setTotalPages(res.data.pagination.total_pages);
@@ -45,22 +79,40 @@ const IncidentsTable = ({ projectId }) => {
     };
 
     fetchLogs();
-  }, [projectId, page]);
+  }, [projectId, page, sortBy, sortOrder, level, search, refreshKey]);
+
+  const sortableColumns = [
+    { key: 'level', label: 'Level', align: '' },
+    { key: 'message', label: 'Message', align: 'w-1/2' },
+    { key: 'occurrence_count', label: 'Occurrences', align: 'text-center' },
+    { key: 'last_seen_at', label: 'Last Seen', align: '' },
+  ];
 
   return (
     <div className="glass-panel overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-700/50 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-white">Recent Incidents</h2>
+      <div className="px-6 py-5 border-b border-slate-700/50">
+        <h2 className="text-lg font-semibold text-white">
+          {level ? `${level.charAt(0).toUpperCase() + level.slice(1)} Incidents` : 'All Incidents'}
+        </h2>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-400">
           <thead className="text-xs uppercase bg-dark-900/50 text-slate-500">
             <tr>
-              <th scope="col" className="px-6 py-4 font-medium">Level</th>
-              <th scope="col" className="px-6 py-4 font-medium w-1/2">Message</th>
-              <th scope="col" className="px-6 py-4 font-medium text-center">Occurrences</th>
-              <th scope="col" className="px-6 py-4 font-medium">Last Seen</th>
+              {sortableColumns.map(col => (
+                <th
+                  key={col.key}
+                  scope="col"
+                  className={clsx("px-6 py-4 font-medium cursor-pointer hover:text-slate-300 transition-colors select-none", col.align)}
+                  onClick={() => handleSort(col.key)}
+                >
+                  <div className={clsx("inline-flex items-center", col.align === 'text-center' && 'justify-center w-full')}>
+                    {col.label}
+                    <SortIcon column={col.key} sortBy={sortBy} sortOrder={sortOrder} />
+                  </div>
+                </th>
+              ))}
               <th scope="col" className="px-6 py-4 font-medium text-right">Action</th>
             </tr>
           </thead>
@@ -74,7 +126,7 @@ const IncidentsTable = ({ projectId }) => {
             ) : logs.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
-                  No incidents recorded yet.
+                  No incidents found.
                 </td>
               </tr>
             ) : (

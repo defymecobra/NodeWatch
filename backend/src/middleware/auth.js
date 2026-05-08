@@ -143,4 +143,18 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { validateApiKey, validateJwt, requireAdmin };
+/**
+ * Middleware: Require developer or admin role.
+ * Blocks guests. Must be used AFTER validateJwt.
+ */
+const requireDeveloper = (req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'developer') {
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied. Developer or Admin role required.',
+    });
+  }
+  next();
+};
+
+module.exports = { validateApiKey, validateJwt, requireAdmin, requireDeveloper };

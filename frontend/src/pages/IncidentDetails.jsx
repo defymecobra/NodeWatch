@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import client from '../api/client';
-import { ArrowLeft, Clock, Server, FileCode, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { ArrowLeft, Clock, Server, FileCode, AlertTriangle, ShieldOff } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import clsx from 'clsx';
 
@@ -22,6 +23,7 @@ const LevelBadge = ({ level }) => {
 
 const IncidentDetails = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [log, setLog] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,13 +62,15 @@ const IncidentDetails = () => {
     );
   }
 
+  const isGuest = user?.role === 'guest';
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
       <div>
-        <Link to="/" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors mb-4">
+        <Link to="/incidents" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors mb-4">
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Dashboard
+          Back to Incidents
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -110,19 +114,30 @@ const IncidentDetails = () => {
         </div>
       </div>
 
-      {/* Payload Data */}
-      {log.payload && Object.keys(log.payload).length > 0 && (
-        <div className="glass-panel overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-700/50 flex items-center">
-            <FileCode className="w-5 h-5 text-slate-400 mr-2" />
-            <h2 className="text-lg font-semibold text-white">Payload & Context</h2>
-          </div>
-          <div className="p-6 bg-dark-900/50">
-            <pre className="text-sm font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all">
-              {JSON.stringify(log.payload, null, 2)}
-            </pre>
-          </div>
+      {/* Payload Data — hidden for guests */}
+      {isGuest ? (
+        <div className="glass-panel p-8 text-center">
+          <ShieldOff className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+          <h2 className="text-lg font-medium text-slate-300 mb-2">Access Restricted</h2>
+          <p className="text-slate-500 text-sm">
+            Payload and stack trace details are not available for Guest users.
+            Contact your administrator for elevated access.
+          </p>
         </div>
+      ) : (
+        log.payload && Object.keys(log.payload).length > 0 && (
+          <div className="glass-panel overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-700/50 flex items-center">
+              <FileCode className="w-5 h-5 text-slate-400 mr-2" />
+              <h2 className="text-lg font-semibold text-white">Payload & Context</h2>
+            </div>
+            <div className="p-6 bg-dark-900/50">
+              <pre className="text-sm font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all">
+                {JSON.stringify(log.payload, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )
       )}
     </div>
   );

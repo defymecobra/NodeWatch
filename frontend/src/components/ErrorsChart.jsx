@@ -7,7 +7,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     return (
       <div className="bg-dark-800 border border-slate-700 p-3 rounded-lg shadow-xl">
         <p className="text-slate-300 text-sm mb-1">
-          {format(parseISO(label), 'MMM d, HH:mm')}
+          {format(parseISO(label), 'MMM d, yyyy')}
         </p>
         <p className="text-brand-400 font-bold">
           {payload[0].value} <span className="font-normal text-slate-400 text-sm">errors</span>
@@ -43,7 +43,7 @@ const ErrorsChart = ({ data }) => {
             dataKey="hour" 
             stroke="#64748b" 
             fontSize={12}
-            tickFormatter={(tick) => format(parseISO(tick), 'HH:mm')}
+            tickFormatter={(tick) => format(parseISO(tick), 'MMM d')}
             tickLine={false}
             axisLine={false}
             dy={10}

@@ -1,11 +1,14 @@
 /**
  * NodeWatch - Admin Routes
  *
- * All routes require JWT authentication + Admin role.
+ * Routes split by access level:
+ * - Developer+ (admin & developer): Projects, API Keys, Alerts
+ * - Admin only: Users, Data Retention
+ *
  * Mounted at: /api/v1/admin
  */
 const { Router } = require('express');
-const { validateJwt, requireAdmin } = require('../middleware/auth');
+const { validateJwt, requireAdmin, requireDeveloper } = require('../middleware/auth');
 const {
   createProject,
   deleteProject,
@@ -23,30 +26,33 @@ const {
 
 const router = Router();
 
-// All admin routes require JWT + Admin role
+// All admin routes require JWT
 router.use(validateJwt);
-router.use(requireAdmin);
 
-// ── Projects ──────────────────────────────────────────────────────────────────
-router.post('/projects', createProject);
-router.delete('/projects/:id', deleteProject);
+// ── Developer+ Routes (admin & developer) ────────────────────────────────────
 
-// ── API Keys ──────────────────────────────────────────────────────────────────
-router.get('/projects/:id/keys', getProjectKeys);
-router.post('/projects/:id/keys', generateApiKey);
-router.delete('/keys/:id', deactivateKey);
+// Projects
+router.post('/projects', requireDeveloper, createProject);
+router.delete('/projects/:id', requireDeveloper, deleteProject);
 
-// ── Alert Configs ─────────────────────────────────────────────────────────────
-router.get('/projects/:id/alerts', getProjectAlerts);
-router.post('/projects/:id/alerts', createAlert);
-router.delete('/alerts/:id', deleteAlert);
+// API Keys
+router.get('/projects/:id/keys', requireDeveloper, getProjectKeys);
+router.post('/projects/:id/keys', requireDeveloper, generateApiKey);
+router.delete('/keys/:id', requireDeveloper, deactivateKey);
 
-// ── Users ─────────────────────────────────────────────────────────────────────
-router.get('/users', getUsers);
-router.patch('/users/:id', updateUserRole);
-router.delete('/users/:id', deleteUser);
+// Alert Configs
+router.get('/projects/:id/alerts', requireDeveloper, getProjectAlerts);
+router.post('/projects/:id/alerts', requireDeveloper, createAlert);
+router.delete('/alerts/:id', requireDeveloper, deleteAlert);
 
-// ── Data Retention ────────────────────────────────────────────────────────────
-router.delete('/logs/cleanup', cleanupLogs);
+// ── Admin-only Routes ─────────────────────────────────────────────────────────
+
+// Users
+router.get('/users', requireAdmin, getUsers);
+router.patch('/users/:id', requireAdmin, updateUserRole);
+router.delete('/users/:id', requireAdmin, deleteUser);
+
+// Data Retention
+router.delete('/logs/cleanup', requireAdmin, cleanupLogs);
 
 module.exports = router;

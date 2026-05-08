@@ -18,26 +18,14 @@ const db = require('../db');
  */
 const getProjects = async (req, res, next) => {
   try {
-    let result;
-
-    if (req.user.role === 'admin') {
-      result = await db.query(
-        `SELECT p.*, u.email AS owner_email,
-                (SELECT COUNT(*) FROM error_logs WHERE project_id = p.id) AS total_errors
-         FROM projects p
-         JOIN users u ON u.id = p.owner_id
-         ORDER BY p.created_at DESC`
-      );
-    } else {
-      result = await db.query(
-        `SELECT p.*,
-                (SELECT COUNT(*) FROM error_logs WHERE project_id = p.id) AS total_errors
-         FROM projects p
-         WHERE p.owner_id = $1
-         ORDER BY p.created_at DESC`,
-        [req.user.userId]
-      );
-    }
+    // All users can see all projects (read-only access)
+    const result = await db.query(
+      `SELECT p.*, u.email AS owner_email,
+              (SELECT COUNT(*) FROM error_logs WHERE project_id = p.id) AS total_errors
+       FROM projects p
+       JOIN users u ON u.id = p.owner_id
+       ORDER BY p.created_at DESC`
+    );
 
     res.json({ success: true, projects: result.rows });
   } catch (err) {
@@ -85,14 +73,13 @@ const getStats = async (req, res, next) => {
       [project_id]
     );
 
-    // Errors per hour (last 24h) — for the chart
+    // Errors per day (all time) — for the chart
     const timelineResult = await db.query(
       `SELECT
-         date_trunc('hour', created_at) AS hour,
+         date_trunc('day', created_at) AS hour,
          COUNT(*) AS count
        FROM error_logs
        WHERE project_id = $1
-         AND created_at > NOW() - INTERVAL '24 hours'
        GROUP BY hour
        ORDER BY hour ASC`,
       [project_id]
