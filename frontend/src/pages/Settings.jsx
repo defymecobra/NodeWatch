@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import {
   FolderPlus, Trash2, Key, Plus, Bell, Users as UsersIcon,
-  Database, Copy, AlertTriangle,
+  Database, Copy, AlertTriangle, Pencil, X,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -350,6 +350,9 @@ const UsersTab = () => {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('developer');
+  const [editingUser, setEditingUser] = useState(null);
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
 
   const fetchUsers = async () => {
     try {
@@ -413,6 +416,40 @@ const UsersTab = () => {
       setUsers(prev => prev.filter(u => u.id !== userId));
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete');
+    }
+  };
+
+  const openEdit = (u) => {
+    setEditingUser(u);
+    setEditEmail(u.email);
+    setEditPassword('');
+  };
+
+  const handleSaveEdit = async () => {
+    const payload = {};
+    if (editEmail.trim() && editEmail.trim() !== editingUser.email) {
+      payload.email = editEmail.trim();
+    }
+    if (editPassword) {
+      if (editPassword.length < 6) {
+        toast.error('Password must be at least 6 characters');
+        return;
+      }
+      payload.password = editPassword;
+    }
+    if (Object.keys(payload).length === 0) {
+      toast.error('No changes to save');
+      return;
+    }
+    try {
+      const res = await client.patch(`/admin/users/${editingUser.id}`, payload);
+      if (res.data.success) {
+        toast.success('User updated!');
+        setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...res.data.user } : u));
+        setEditingUser(null);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update user');
     }
   };
 
@@ -485,20 +522,74 @@ const UsersTab = () => {
                   </select>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  {u.id !== currentUser?.id && (
-                    <button
-                      onClick={() => handleDelete(u.id, u.email)}
-                      className="text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    {u.id !== currentUser?.id && (
+                      <>
+                        <button
+                          onClick={() => openEdit(u)}
+                          className="text-slate-400 hover:text-brand-400 transition-colors"
+                          title="Edit user"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(u.id, u.email)}
+                          className="text-slate-400 hover:text-red-400 transition-colors"
+                          title="Delete user"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Admin Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setEditingUser(null)} />
+          <div className="relative glass-panel p-6 w-full max-w-md mx-4 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Edit User: {editingUser.email}</h2>
+              <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Login / Email</label>
+                <input
+                  type="text"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-800 border border-slate-700 rounded-lg text-slate-200 text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="Leave empty to keep current"
+                  className="w-full px-4 py-2 bg-dark-800 border border-slate-700 rounded-lg text-slate-200 text-sm placeholder-slate-500 outline-none focus:border-brand-500"
+                />
+              </div>
+              <button
+                onClick={handleSaveEdit}
+                className="btn-primary w-full py-2.5"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

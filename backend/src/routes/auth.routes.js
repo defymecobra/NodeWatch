@@ -7,7 +7,7 @@
  */
 const { Router } = require('express');
 const { validateJwt, requireAdmin } = require('../middleware/auth');
-const { login, register, getMe }    = require('../controllers/auth.controller');
+const { login, register, getMe, updateProfile } = require('../controllers/auth.controller');
 
 const router = Router();
 
@@ -16,6 +16,7 @@ router.post('/login', login);
 
 // Protected routes (require JWT)
 router.get('/me', validateJwt, getMe);
+router.patch('/profile', validateJwt, updateProfile);
 router.post('/register', validateJwt, requireAdmin, register);
 
 module.exports = router;

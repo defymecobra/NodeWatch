@@ -63,7 +63,7 @@ const Dashboard = () => {
           <p className="text-slate-400 text-sm mt-1">Real-time error monitoring and analytics</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <TestEventButton projectId={selectedProjectId} onEventSent={() => setRefreshKey(k => k + 1)} />
           <select
             value={selectedProjectId}
@@ -117,7 +117,7 @@ const Dashboard = () => {
           </div>
 
           {/* Main Chart */}
-          <div className="glass-panel p-6">
+          <div className="glass-panel p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-white mb-6">Error Frequency (All Time)</h2>
             <ErrorsChart data={stats.timeline_24h} />
           </div>

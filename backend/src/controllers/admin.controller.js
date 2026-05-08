@@ -312,32 +312,80 @@ const getUsers = async (req, res, next) => {
 
 /**
  * PATCH /admin/users/:id
- * Body: { role }
+ * Body: { role?, email?, password? }
+ * Admin can change role, email, and/or password of any user (except self-role).
  */
 const updateUserRole = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { role } = req.body;
+    const { role, email, password } = req.body;
 
     const validRoles = ['admin', 'developer', 'guest'];
-    if (!role || !validRoles.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        error: `Field "role" must be one of: ${validRoles.join(', ')}`,
-      });
-    }
 
     // Prevent admin from demoting themselves
-    if (id === req.user.userId) {
+    if (role && id === req.user.userId) {
       return res.status(400).json({
         success: false,
         error: 'You cannot change your own role.',
       });
     }
 
+    // Build dynamic update
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (role) {
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          error: `Field "role" must be one of: ${validRoles.join(', ')}`,
+        });
+      }
+      updates.push(`role = $${idx++}`);
+      values.push(role);
+    }
+
+    if (email && email.trim()) {
+      // Check uniqueness
+      const existing = await db.query(
+        `SELECT id FROM users WHERE email = $1 AND id != $2`,
+        [email.toLowerCase().trim(), id]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: 'This email is already taken.',
+        });
+      }
+      updates.push(`email = $${idx++}`);
+      values.push(email.toLowerCase().trim());
+    }
+
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must be at least 6 characters.',
+        });
+      }
+      const bcrypt = require('bcrypt');
+      const hash = await bcrypt.hash(password, 10);
+      updates.push(`password_hash = $${idx++}`);
+      values.push(hash);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No changes provided (role, email, or password required).',
+      });
+    }
+
+    values.push(id);
     const result = await db.query(
-      `UPDATE users SET role = $1 WHERE id = $2 RETURNING id, email, role`,
-      [role, id]
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, email, role`,
+      values
     );
 
     if (result.rows.length === 0) {

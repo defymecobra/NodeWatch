@@ -11,8 +11,8 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config if you have one, or just use default
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config for SPA routing + API proxy
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from builder
 COPY --from=build /app/dist /usr/share/nginx/html

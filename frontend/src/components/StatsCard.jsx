@@ -3,7 +3,7 @@ import clsx from 'clsx';
 
 const StatsCard = ({ title, value, icon: Icon, colorClass, trend }) => {
   return (
-    <div className="glass-panel p-6 relative overflow-hidden group">
+    <div className="glass-panel p-4 sm:p-6 relative overflow-hidden group">
       {/* Background glow effect on hover */}
       <div 
         className={clsx(
@@ -14,8 +14,8 @@ const StatsCard = ({ title, value, icon: Icon, colorClass, trend }) => {
       
       <div className="flex justify-between items-start">
         <div>
-          <p className="text-sm font-medium text-slate-400 mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-white tracking-tight">{value}</h3>
+          <p className="text-xs sm:text-sm font-medium text-slate-400 mb-1 truncate">{title}</p>
+          <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{value}</h3>
           
           {trend && (
             <div className="mt-2 flex items-center text-sm">

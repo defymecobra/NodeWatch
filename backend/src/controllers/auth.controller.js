@@ -165,4 +165,94 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { login, register, getMe };
+/**
+ * PATCH /api/v1/auth/profile
+ * Update own email and/or password.
+ * Body: { currentPassword, newEmail?, newPassword? }
+ */
+const updateProfile = async (req, res, next) => {
+  try {
+    const { currentPassword, newEmail, newPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Current password is required to make changes.',
+      });
+    }
+
+    // Verify current password
+    const userResult = await db.query(
+      `SELECT id, email, password_hash FROM users WHERE id = $1`,
+      [req.user.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    const user = userResult.rows[0];
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Current password is incorrect.',
+      });
+    }
+
+    // Build update query dynamically
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (newEmail && newEmail.trim() !== user.email) {
+      // Check if email is already taken
+      const existing = await db.query(
+        `SELECT id FROM users WHERE email = $1 AND id != $2`,
+        [newEmail.toLowerCase().trim(), user.id]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: 'This email is already taken.',
+        });
+      }
+      updates.push(`email = $${idx++}`);
+      values.push(newEmail.toLowerCase().trim());
+    }
+
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: 'New password must be at least 6 characters.',
+        });
+      }
+      const hash = await bcrypt.hash(newPassword, 10);
+      updates.push(`password_hash = $${idx++}`);
+      values.push(hash);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No changes provided (newEmail or newPassword required).',
+      });
+    }
+
+    values.push(user.id);
+    const result = await db.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, email, role, created_at`,
+      values
+    );
+
+    res.json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { login, register, getMe, updateProfile };
