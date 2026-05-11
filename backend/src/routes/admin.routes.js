@@ -11,6 +11,7 @@ const { Router } = require('express');
 const { validateJwt, requireAdmin, requireDeveloper } = require('../middleware/auth');
 const {
   createProject,
+  updateProject,
   deleteProject,
   getProjectKeys,
   generateApiKey,
@@ -34,6 +35,7 @@ router.use(validateJwt);
 
 // Projects
 router.post('/projects', requireDeveloper, createProject);
+router.patch('/projects/:id', requireDeveloper, updateProject);
 router.delete('/projects/:id', requireDeveloper, deleteProject);
 
 // API Keys

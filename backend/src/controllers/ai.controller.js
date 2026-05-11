@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const db = require('../db');
 
 // Initialize Gemini API
 const getModel = () => {
@@ -71,6 +72,82 @@ Do not repeat the raw error message itself, jump straight into the insights. Kee
   }
 };
 
+/**
+ * Generates strategic architectural advice based on recent error trends
+ */
+const getStrategicAdvice = async (req, res, next) => {
+  try {
+    const { projectId } = req.query;
+
+    // Fetch errors from last 48h
+    let queryText = `
+      SELECT message, level, occurrence_count, last_seen_at
+      FROM error_logs
+      WHERE last_seen_at > NOW() - INTERVAL '48 hours'
+    `;
+    const queryParams = [];
+
+    if (projectId && projectId !== 'all') {
+      queryText += ` AND project_id = $1`;
+      queryParams.push(projectId);
+    }
+
+    queryText += ` ORDER BY occurrence_count DESC LIMIT 50`;
+
+    const logsRes = await db.query(queryText, queryParams);
+    const logs = logsRes.rows;
+
+    if (logs.length === 0) {
+      return res.json({
+        success: true,
+        advice: "Everything looks great! No errors detected in the last 48 hours. Keep it up! 🚀"
+      });
+    }
+
+    let model;
+    try {
+      model = getModel();
+    } catch (err) {
+      return res.status(503).json({
+        success: false,
+        message: 'AI Assistant is not configured on the server.'
+      });
+    }
+
+    const prompt = `
+You are a Lead Software Architect and Reliability Engineer.
+Analyze the following error logs from the last 48 hours and provide a strategic summary.
+Look for patterns, recurring issues, and systemic problems.
+
+Errors:
+${logs.map(l => `- [${l.level.toUpperCase()}] (${l.occurrence_count} times) ${l.message}`).join('\n')}
+
+Format your response in Markdown:
+1. **Executive Summary**: A brief overview of the system's current health.
+2. **Key Patterns**: Identify common themes or related failures.
+3. **Action Items**: Prioritized technical recommendations to improve reliability.
+4. **Strategic Outlook**: Long-term suggestions (e.g., refactoring, infrastructure changes).
+
+Keep it professional, high-level, and deeply insightful.
+`;
+
+    const result = await model.generateContent(prompt);
+    const adviceText = result.response.text();
+
+    res.json({
+      success: true,
+      advice: adviceText
+    });
+  } catch (error) {
+    console.error('[AI Advisor] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate AI advice'
+    });
+  }
+};
+
 module.exports = {
-  analyzeError
+  analyzeError,
+  getStrategicAdvice
 };

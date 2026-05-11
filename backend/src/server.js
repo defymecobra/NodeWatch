@@ -8,9 +8,13 @@ require('./db');
 
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const configService = require('./services/config');
+const uptimeService = require('./services/uptime.service');
 
 // Load dynamic config from DB
 configService.loadFromDb();
+
+// Start background services
+uptimeService.start();
 
 const app  = express();
 const PORT = process.env.PORT || 3000;

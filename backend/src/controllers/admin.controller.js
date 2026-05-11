@@ -93,6 +93,49 @@ const deleteProject = async (req, res, next) => {
   }
 };
 
+/**
+ * PATCH /admin/projects/:id
+ * Body: { name?, uptime_url? }
+ */
+const updateProject = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, uptime_url } = req.body;
+
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (name !== undefined) {
+      updates.push(`name = $${idx++}`);
+      values.push(name.trim());
+    }
+
+    if (uptime_url !== undefined) {
+      updates.push(`uptime_url = $${idx++}`);
+      values.push(uptime_url.trim());
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+
+    values.push(id);
+    const result = await db.query(
+      `UPDATE projects SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+
+    res.json({ success: true, project: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // API KEYS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -488,6 +531,7 @@ const cleanupLogs = async (req, res, next) => {
 
 module.exports = {
   createProject,
+  updateProject,
   deleteProject,
   getProjectKeys,
   generateApiKey,

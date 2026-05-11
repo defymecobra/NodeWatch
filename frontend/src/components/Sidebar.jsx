@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, AlertCircle, Settings as SettingsIcon, LogOut, ShieldAlert, Menu, X, Pencil, BarChart3, Activity } from 'lucide-react';
+import { LayoutDashboard, AlertCircle, Settings as SettingsIcon, LogOut, ShieldAlert, Menu, X, Pencil, BarChart3, Activity, Globe, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
 import ProfileModal from './ProfileModal';
@@ -14,7 +14,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Incidents', path: '/incidents', icon: AlertCircle, roles: ['admin', 'developer', 'guest'] },
     { name: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['admin', 'developer', 'guest'] },
     { name: 'Monitoring', path: '/monitoring', icon: Activity, roles: ['admin', 'developer'] },
-    { name: 'Settings', path: '/settings', icon: SettingsIcon, roles: ['admin', 'developer'] },
+    { name: 'Uptime', path: '/uptime', icon: Globe, roles: ['admin', 'developer', 'guest'] },
+    { name: 'AI Advisor', path: '/advisor', icon: Sparkles, roles: ['admin', 'developer'] },
   ];
 
   // Filter nav items based on user role
@@ -73,6 +74,27 @@ const Sidebar = ({ isOpen, onClose }) => {
             </NavLink>
           ))}
         </nav>
+
+        {/* Bottom Actions */}
+        <div className="px-4 py-2">
+          {['admin', 'developer'].includes(user?.role) && (
+            <NavLink
+              to="/settings"
+              onClick={onClose}
+              className={({ isActive }) =>
+                clsx(
+                  'flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors',
+                  isActive
+                    ? 'bg-brand-500/10 text-brand-500'
+                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                )
+              }
+            >
+              <SettingsIcon className="w-5 h-5 mr-3" />
+              Settings
+            </NavLink>
+          )}
+        </div>
 
         {/* User Profile & Logout */}
         <div className="p-4 border-t border-slate-800">

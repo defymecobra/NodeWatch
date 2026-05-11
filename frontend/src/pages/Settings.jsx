@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   FolderPlus, Trash2, Key, Plus, Bell, Users as UsersIcon,
   Database, Copy, AlertTriangle, Pencil, X, Send, Hash, ChevronDown,
-  Settings2, Eye, EyeOff, Activity,
+  Settings2, Eye, EyeOff, Activity, Globe,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -121,6 +121,18 @@ const ProjectsTab = () => {
 
   const toggleKeyVisibility = (keyId) => {
     setVisibleKeys(prev => ({ ...prev, [keyId]: !prev[keyId] }));
+  };
+
+  const handleUpdateUptime = async (projectId, url) => {
+    try {
+      const res = await client.patch(`/admin/projects/${projectId}`, { uptime_url: url });
+      if (res.data.success) {
+        toast.success('Uptime URL updated');
+        fetchProjects();
+      }
+    } catch (err) {
+      toast.error('Failed to update Uptime URL');
+    }
   };
 
   const toggleExpand = (projectId) => {
@@ -281,6 +293,34 @@ const ProjectsTab = () => {
                 ) : (
                   <p className="text-xs text-slate-500">No keys yet. Generate one to start collecting logs.</p>
                 )}
+                {/* Uptime Section */}
+                <div className="mt-6 pt-4 border-t border-slate-700/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Globe className="w-4 h-4 text-slate-400" />
+                    <h4 className="text-sm font-medium text-slate-300">Uptime Monitoring</h4>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="https://your-api.com/health"
+                      defaultValue={p.uptime_url || ''}
+                      onBlur={(e) => {
+                        if (e.target.value !== (p.uptime_url || '')) {
+                          handleUpdateUptime(p.id, e.target.value);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleUpdateUptime(p.id, e.target.value);
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-dark-800 border border-slate-700 rounded-lg text-slate-200 text-xs placeholder-slate-600 outline-none focus:border-brand-500"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1.5 ml-1">
+                    Enter a public URL to monitor availability. We'll check it every minute.
+                  </p>
+                </div>
               </div>
             )}
           </div>
