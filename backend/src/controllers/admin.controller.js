@@ -241,7 +241,7 @@ const createAlert = async (req, res, next) => {
       });
     }
 
-    const validChannels = ['telegram', 'email'];
+    const validChannels = ['telegram', 'email', 'discord'];
     const validLevels = ['info', 'warn', 'error', 'critical'];
 
     const alertChannel = validChannels.includes(channel) ? channel : 'telegram';

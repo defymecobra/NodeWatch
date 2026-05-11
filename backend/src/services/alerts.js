@@ -5,9 +5,11 @@
  * Supports sending notifications via Telegram.
  */
 const TelegramBot = require('node-telegram-bot-api');
+const https = require('https');
 const db = require('../db');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://localhost:5173';
 let bot = null;
 
 if (token) {
@@ -61,6 +63,8 @@ async function processAlerts(project, log, isDuplicate) {
       if (logWeight >= configWeight) {
         if (config.channel === 'telegram' && bot) {
           await sendTelegramAlert(config.recipient_id, project.name, log);
+        } else if (config.channel === 'discord') {
+          await sendDiscordAlert(config.recipient_id, project.name, log);
         }
       }
     }
@@ -87,6 +91,62 @@ async function sendTelegramAlert(chatId, projectName, log) {
     await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (err) {
     console.error(`❌ Telegram alert failed for chat ${chatId}:`, err.message);
+  }
+}
+
+/**
+ * Send a rich embed message to a Discord Webhook.
+ * 
+ * @param {string} webhookUrl - Discord Webhook URL
+ * @param {string} projectName - Name of the project
+ * @param {Object} log - The log entry
+ */
+async function sendDiscordAlert(webhookUrl, projectName, log) {
+  const color = log.level === 'critical' ? 0xff4757 : // Red
+                log.level === 'error'    ? 0xffa502 : // Orange
+                log.level === 'warn'     ? 0xeccc68 : // Yellow
+                                           0x2f3542;   // Dark
+  
+  const payload = JSON.stringify({
+    embeds: [{
+      title: `NodeWatch Alert: ${projectName}`,
+      description: `**${log.message}**`,
+      color: color,
+      fields: [
+        { name: 'Level', value: log.level.toUpperCase(), inline: true },
+        { name: 'Project', value: projectName, inline: true },
+        { name: 'Time', value: new Date(log.last_seen_at || log.created_at).toLocaleString(), inline: true }
+      ],
+      footer: { text: 'NodeWatch Monitoring' },
+      timestamp: new Date().toISOString(),
+      url: `${DASHBOARD_URL}/incidents/${log.id}`
+    }]
+  });
+
+  try {
+    const url = new URL(webhookUrl);
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve();
+        else reject(new Error(`Discord API returned status ${res.statusCode}`));
+      });
+
+      req.on('error', (err) => reject(err));
+      req.write(payload);
+      req.end();
+    });
+  } catch (err) {
+    console.error(`❌ Discord alert failed for ${projectName}:`, err.message);
   }
 }
 

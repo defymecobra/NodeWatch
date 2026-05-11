@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import {
   FolderPlus, Trash2, Key, Plus, Bell, Users as UsersIcon,
-  Database, Copy, AlertTriangle, Pencil, X,
+  Database, Copy, AlertTriangle, Pencil, X, Send, Hash, ChevronDown,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -213,7 +213,8 @@ const AlertsTab = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [alerts, setAlerts] = useState([]);
-  const [chatId, setChatId] = useState('');
+  const [recipientId, setRecipientId] = useState('');
+  const [channel, setChannel] = useState('telegram');
   const [minLevel, setMinLevel] = useState('error');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -244,16 +245,19 @@ const AlertsTab = () => {
   }, [selectedProjectId]);
 
   const handleAddAlert = async () => {
-    if (!chatId.trim()) { toast.error('Chat ID is required'); return; }
+    if (!recipientId.trim()) { 
+      toast.error(channel === 'telegram' ? 'Chat ID is required' : 'Webhook URL is required'); 
+      return; 
+    }
     try {
       const res = await client.post(`/admin/projects/${selectedProjectId}/alerts`, {
-        channel: 'telegram',
-        recipient_id: chatId.trim(),
+        channel: channel,
+        recipient_id: recipientId.trim(),
         min_level: minLevel,
       });
       if (res.data.success) {
         toast.success('Alert config added!');
-        setChatId('');
+        setRecipientId('');
         setAlerts(prev => [res.data.alert, ...prev]);
       }
     } catch (err) {
@@ -272,40 +276,98 @@ const AlertsTab = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {/* Project Selector */}
-      <select
-        value={selectedProjectId}
-        onChange={(e) => setSelectedProjectId(e.target.value)}
-        className="bg-dark-800 border border-slate-700 text-slate-200 text-sm rounded-lg block w-full p-2.5 outline-none"
-      >
-        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-      </select>
+      <div className="relative group">
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-brand-500 transition-colors">
+          <FolderPlus className="w-4 h-4" />
+        </div>
+        <select
+          value={selectedProjectId}
+          onChange={(e) => setSelectedProjectId(e.target.value)}
+          className="bg-dark-800 border border-slate-700/50 text-slate-200 text-sm rounded-xl block w-full pl-10 pr-10 py-3 outline-none focus:border-brand-500/50 focus:ring-4 focus:ring-brand-500/5 transition-all cursor-pointer appearance-none shadow-xl"
+        >
+          {projects.map(p => <option key={p.id} value={p.id} className="bg-dark-900 text-white">{p.name}</option>)}
+        </select>
+        <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
+          <ChevronDown className="w-4 h-4" />
+        </div>
+      </div>
 
       {/* Add Alert Form */}
-      <div className="glass-panel p-4 space-y-4">
-        <h3 className="text-sm font-medium text-white">Add Telegram Alert</h3>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Telegram Chat ID"
-            value={chatId}
-            onChange={(e) => setChatId(e.target.value)}
-            className="flex-1 px-4 py-2 bg-dark-800 border border-slate-700 rounded-lg text-slate-200 text-sm placeholder-slate-500 outline-none"
-          />
-          <select
-            value={minLevel}
-            onChange={(e) => setMinLevel(e.target.value)}
-            className="px-4 py-2 bg-dark-800 border border-slate-700 rounded-lg text-slate-200 text-sm outline-none"
-          >
-            <option value="info">Info+</option>
-            <option value="warn">Warn+</option>
-            <option value="error">Error+</option>
-            <option value="critical">Critical only</option>
-          </select>
-          <button onClick={handleAddAlert} className="btn-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add
-          </button>
+      <div className="glass-panel px-6 pt-2 pb-4 space-y-2 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 bg-brand-500/5 blur-3xl rounded-full -mr-4 -mt-4 pointer-events-none"></div>
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative">
+          <div>
+            <h3 className="text-base font-semibold text-white">Add Notification Channel</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Choose where you want to receive alerts for this project</p>
+          </div>
+          
+          <div className="flex p-1 bg-dark-900/80 border border-slate-700/50 rounded-xl w-fit">
+            <button 
+              onClick={() => setChannel('telegram')}
+              className={clsx(
+                "flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                channel === 'telegram' 
+                  ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20" 
+                  : "text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <Send className="w-4 h-4" />
+              Telegram
+            </button>
+            <button 
+              onClick={() => setChannel('discord')}
+              className={clsx(
+                "flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                channel === 'discord' 
+                  ? "bg-[#5865F2] text-white shadow-lg shadow-[#5865F2]/20" 
+                  : "text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <Hash className="w-4 h-4" />
+              Discord
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative">
+          <div className="md:col-span-7">
+            <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-1.5 ml-1">
+              {channel === 'telegram' ? "Telegram Chat ID" : "Discord Webhook URL"}
+            </label>
+            <input
+              type="text"
+              placeholder={channel === 'telegram' ? "Enter Chat ID (e.g. 12345678)" : "Paste Webhook URL..."}
+              value={recipientId}
+              onChange={(e) => setRecipientId(e.target.value)}
+              className="w-full px-4 py-2.5 bg-dark-800/80 border border-slate-700 rounded-lg text-slate-200 text-sm placeholder-slate-600 outline-none focus:border-brand-500/50 transition-all"
+            />
+          </div>
+          <div className="md:col-span-3">
+            <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-1.5 ml-1">
+              Min. Severity
+            </label>
+            <select
+              value={minLevel}
+              onChange={(e) => setMinLevel(e.target.value)}
+              className="w-full px-4 py-2.5 bg-dark-800 border border-slate-700 rounded-lg text-slate-200 text-sm outline-none focus:border-brand-500/50 transition-all appearance-none cursor-pointer"
+            >
+              <option value="info" className="bg-dark-900 text-white">Info+</option>
+              <option value="warn" className="bg-dark-900 text-white">Warn+</option>
+              <option value="error" className="bg-dark-900 text-white">Error+</option>
+              <option value="critical" className="bg-dark-900 text-white">Critical only</option>
+            </select>
+          </div>
+          <div className="md:col-span-2 flex items-end">
+            <button 
+              onClick={handleAddAlert} 
+              className="w-full h-[42px] bg-brand-500 hover:bg-brand-400 text-white font-semibold rounded-lg shadow-lg shadow-brand-500/20 transition-all flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add
+            </button>
+          </div>
         </div>
       </div>
 
@@ -324,7 +386,10 @@ const AlertsTab = () => {
                   <span className="text-sm text-white font-medium capitalize">{a.channel}</span>
                   <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">≥ {a.min_level}</span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1 font-mono">Chat ID: {a.recipient_id}</p>
+                <p className="text-xs text-slate-400 mt-1 font-mono truncate max-w-[250px]" title={a.recipient_id}>
+                  {a.channel === 'telegram' ? 'Chat ID: ' : 'Webhook: '}
+                  {a.recipient_id}
+                </p>
               </div>
               <button
                 onClick={() => handleDeleteAlert(a.id)}
