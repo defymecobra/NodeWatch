@@ -136,8 +136,15 @@ const IncidentsTable = ({ projectId, level, search, refreshKey }) => {
                     <LevelBadge level={log.level} />
                   </td>
                   <td className="px-6 py-4 font-medium text-slate-200">
-                    <div className="truncate max-w-md" title={log.message}>
-                      {log.message}
+                    <div className="flex items-center gap-3">
+                      <div className="truncate max-w-[280px] xl:max-w-md" title={log.message}>
+                        {log.message}
+                      </div>
+                      {projectId === 'all' && (
+                        <span className="shrink-0 text-[9px] text-slate-400 font-medium uppercase tracking-wider px-2 py-0.5 bg-dark-900 rounded-md border border-slate-700">
+                          {log.project_name}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center font-mono">

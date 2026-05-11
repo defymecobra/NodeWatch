@@ -54,9 +54,12 @@ const Incidents = () => {
             {projects.length === 0 ? (
               <option value="">No projects found</option>
             ) : (
-              projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))
+              <>
+                <option value="all">All Projects</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </>
             )}
           </select>
         </div>

@@ -3,8 +3,9 @@
  *
  * Provides data for the web dashboard.
  * All endpoints require JWT authentication.
+ * project_id can be a UUID or "all" for cross-project data.
  *
- * GET /api/v1/dashboard/stats      — summary stats for a project
+ * GET /api/v1/dashboard/stats      — summary stats for a project (or all)
  * GET /api/v1/dashboard/logs       — paginated list of error logs
  * GET /api/v1/dashboard/logs/:id   — single log details
  * GET /api/v1/dashboard/projects   — list user's projects
@@ -34,8 +35,8 @@ const getProjects = async (req, res, next) => {
 };
 
 /**
- * GET /api/v1/dashboard/stats?project_id=UUID
- * Returns aggregated statistics for a project.
+ * GET /api/v1/dashboard/stats?project_id=UUID|all
+ * Returns aggregated statistics for a project or all projects.
  */
 const getStats = async (req, res, next) => {
   try {
@@ -48,29 +49,33 @@ const getStats = async (req, res, next) => {
       });
     }
 
+    const isAll = project_id === 'all';
+    const projectWhere = isAll ? '' : 'WHERE project_id = $1';
+    const projectAnd = isAll ? '' : 'AND project_id = $1';
+    const params = isAll ? [] : [project_id];
+
     // Total errors
     const totalResult = await db.query(
-      `SELECT COUNT(*) AS total FROM error_logs WHERE project_id = $1`,
-      [project_id]
+      `SELECT COUNT(*) AS total FROM error_logs ${projectWhere}`,
+      params
     );
 
     // Errors by level
     const byLevelResult = await db.query(
       `SELECT level, COUNT(*) AS count
        FROM error_logs
-       WHERE project_id = $1
+       ${projectWhere}
        GROUP BY level
        ORDER BY count DESC`,
-      [project_id]
+      params
     );
 
     // Errors in last 24h
     const last24hResult = await db.query(
       `SELECT COUNT(*) AS count
        FROM error_logs
-       WHERE project_id = $1
-         AND created_at > NOW() - INTERVAL '24 hours'`,
-      [project_id]
+       WHERE created_at > NOW() - INTERVAL '24 hours' ${projectAnd}`,
+      params
     );
 
     // Errors per day (all time) — for the chart
@@ -79,18 +84,18 @@ const getStats = async (req, res, next) => {
          date_trunc('day', created_at) AS hour,
          COUNT(*) AS count
        FROM error_logs
-       WHERE project_id = $1
+       ${projectWhere}
        GROUP BY hour
        ORDER BY hour ASC`,
-      [project_id]
+      params
     );
 
     // Total duplicates caught
     const dupsResult = await db.query(
       `SELECT COALESCE(SUM(occurrence_count) - COUNT(*), 0) AS duplicates_caught
        FROM error_logs
-       WHERE project_id = $1`,
-      [project_id]
+       ${projectWhere}`,
+      params
     );
 
     res.json({
@@ -109,7 +114,7 @@ const getStats = async (req, res, next) => {
 };
 
 /**
- * GET /api/v1/dashboard/logs?project_id=UUID&page=1&limit=20&level=error&sort_by=last_seen_at&sort_order=desc&search=keyword
+ * GET /api/v1/dashboard/logs?project_id=UUID|all&page=1&limit=20&level=error&sort_by=last_seen_at&sort_order=desc&search=keyword
  * Returns a paginated list of error logs with sorting and search.
  */
 const getLogs = async (req, res, next) => {
@@ -127,8 +132,14 @@ const getLogs = async (req, res, next) => {
     }
 
     // Build dynamic WHERE clause
-    const conditions = ['project_id = $1'];
-    const params = [project_id];
+    const isAll = project_id === 'all';
+    const conditions = [];
+    const params = [];
+
+    if (!isAll) {
+      conditions.push(`project_id = $${params.length + 1}`);
+      params.push(project_id);
+    }
 
     if (level) {
       conditions.push(`level = $${params.length + 1}`);
@@ -140,7 +151,7 @@ const getLogs = async (req, res, next) => {
       params.push(`%${search.trim()}%`);
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
 
     // Validate sort parameters
     const allowedSortColumns = ['level', 'message', 'occurrence_count', 'created_at', 'last_seen_at'];
@@ -149,16 +160,17 @@ const getLogs = async (req, res, next) => {
 
     // Get total count for pagination
     const countResult = await db.query(
-      `SELECT COUNT(*) AS total FROM error_logs WHERE ${whereClause}`,
+      `SELECT COUNT(*) AS total FROM error_logs el WHERE ${whereClause.replace(/project_id/g, 'el.project_id').replace(/level/g, 'el.level').replace(/message/g, 'el.message')}`,
       params
     );
 
     // Get paginated logs with sorting
     const logsResult = await db.query(
-      `SELECT id, level, message, error_hash, occurrence_count, created_at, last_seen_at
-       FROM error_logs
-       WHERE ${whereClause}
-       ORDER BY ${sortColumn} ${sortDirection}
+      `SELECT el.id, el.level, el.message, el.error_hash, el.occurrence_count, el.created_at, el.last_seen_at, p.name AS project_name
+       FROM error_logs el
+       JOIN projects p ON p.id = el.project_id
+       WHERE ${whereClause.replace(/project_id/g, 'el.project_id').replace(/level/g, 'el.level').replace(/message/g, 'el.message')}
+       ORDER BY el.${sortColumn} ${sortDirection}
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
