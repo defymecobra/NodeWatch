@@ -5,7 +5,7 @@ import StatsCard from '../components/StatsCard';
 import ErrorsChart from '../components/ErrorsChart';
 import IncidentsTable from '../components/IncidentsTable';
 import TestEventButton from '../components/TestEventButton';
-import { AlertTriangle, Activity, DatabaseZap, Clock, ArrowRight, BarChart3 } from 'lucide-react';
+import { AlertTriangle, Activity, DatabaseZap, Clock, ArrowRight, BarChart3, Cpu, Server, Database } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const LEVEL_COLORS = { critical: '#ef4444', error: '#f97316', warn: '#eab308', info: '#3b82f6' };
@@ -219,6 +219,43 @@ const Dashboard = () => {
               colorClass="bg-purple-500 text-purple-500" 
             />
           </div>
+
+          {/* Monitoring CTA Banner */}
+          <Link to="/monitoring" className="block relative group overflow-hidden rounded-xl border border-brand-500/20 bg-dark-800/80 hover:border-brand-500/50 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-r from-brand-500/10 to-emerald-500/10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-brand-500/10 to-transparent pointer-events-none"></div>
+            
+            <div className="relative p-6 sm:p-8 flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="hidden sm:flex h-16 w-16 rounded-2xl bg-brand-500/20 items-center justify-center border border-brand-500/30 group-hover:scale-110 transition-transform">
+                  <Server className="w-8 h-8 text-brand-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-bold text-white group-hover:text-brand-400 transition-colors">System Monitoring</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Live Now</span>
+                  </div>
+                  <p className="text-slate-400 max-w-xl text-sm leading-relaxed">View real-time resource utilization, CPU load, and detailed server infrastructure metrics in the dedicated monitoring dashboard.</p>
+                </div>
+              </div>
+              <div className="hidden md:flex items-center gap-6 text-slate-400 transition-colors">
+                <div className="flex items-center gap-3 group-hover:text-white">
+                  <div className="flex items-center gap-2 bg-dark-900/50 px-3 py-1.5 rounded-lg border border-white/5">
+                    <Cpu className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-medium">CPU</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-dark-900/50 px-3 py-1.5 rounded-lg border border-white/5">
+                    <Database className="w-4 h-4 text-brand-400" />
+                    <span className="text-sm font-medium">RAM</span>
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-semibold hover:from-brand-600 hover:to-brand-500 transition-all shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40">
+                  View Monitoring
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </Link>
 
           {/* Main Chart */}
           <div className="glass-panel p-4 sm:p-6">

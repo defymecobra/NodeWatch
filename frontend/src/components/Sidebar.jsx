@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, AlertCircle, Settings as SettingsIcon, LogOut, ShieldAlert, Menu, X, Pencil, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, AlertCircle, Settings as SettingsIcon, LogOut, ShieldAlert, Menu, X, Pencil, BarChart3, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
 import ProfileModal from './ProfileModal';
@@ -13,6 +13,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['admin', 'developer', 'guest'] },
     { name: 'Incidents', path: '/incidents', icon: AlertCircle, roles: ['admin', 'developer', 'guest'] },
     { name: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['admin', 'developer', 'guest'] },
+    { name: 'Monitoring', path: '/monitoring', icon: Activity, roles: ['admin', 'developer'] },
     { name: 'Settings', path: '/settings', icon: SettingsIcon, roles: ['admin', 'developer'] },
   ];
 

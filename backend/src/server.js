@@ -31,6 +31,7 @@ app.use('/api/v1/auth',      require('./routes/auth.routes'));
 app.use('/api/v1/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/v1/admin',     require('./routes/admin.routes'));
 app.use('/api/v1/analytics', require('./routes/analytics.routes'));
+app.use('/api/v1/system',    require('./routes/system.routes'));
 
 // ── 404 & Error Handlers (must be LAST) ──────────────────────────────────────
 app.use(notFound);

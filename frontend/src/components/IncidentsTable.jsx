@@ -156,9 +156,9 @@ const IncidentsTable = ({ projectId, level, search, refreshKey }) => {
                   <td className="px-6 py-4 text-right">
                     <Link
                       to={`/incidents/${log.id}`}
-                      className="inline-flex items-center text-brand-400 hover:text-brand-300 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-500/10 text-brand-400 hover:bg-brand-500/20 hover:text-brand-300 border border-brand-500/20 hover:border-brand-500/30 transition-all"
                     >
-                      <Eye className="w-4 h-4 mr-1" />
+                      <Eye className="w-3.5 h-3.5" />
                       View
                     </Link>
                   </td>

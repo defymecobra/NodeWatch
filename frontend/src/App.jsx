@@ -8,6 +8,7 @@ import Incidents from './pages/Incidents';
 import IncidentDetails from './pages/IncidentDetails';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
+import Monitoring from './pages/Monitoring';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -39,8 +40,9 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="incidents" element={<Incidents />} />
             <Route path="incidents/:id" element={<IncidentDetails />} />
-            <Route path="settings" element={<Settings />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="monitoring" element={<Monitoring />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </Router>
