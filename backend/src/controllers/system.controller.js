@@ -18,12 +18,16 @@ const getMetrics = async (req, res, next) => {
       totalIdle += cpu.times.idle - prevCpu.times.idle;
     }
     
-    const idlePercent = totalTick === 0 ? 0 : (totalIdle / totalTick);
-    const cpuUsage = Math.round((1 - idlePercent) * 100);
+    const idlePercent = totalTick === 0 ? 1 : (totalIdle / totalTick);
+    let cpuUsage = Math.round((1 - idlePercent) * 100);
+    
+    // If it's the very first request or rapid consecutive requests (totalTick is very small), 
+    // it might be inaccurate. We'll only update the baseline if enough ticks have passed.
+    if (totalTick > 0) {
+      lastCpus = currentCpus;
+    }
     
     const finalCpu = cpuUsage === 0 ? Math.min(100, Math.round((os.loadavg()[0] / os.cpus().length) * 100)) : cpuUsage;
-
-    lastCpus = currentCpus;
     const memUsage = process.memoryUsage();
     
     // Fetch DB size and total logs

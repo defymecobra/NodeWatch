@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Clock, Server, FileCode, AlertTriangle, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Clock, Server, FileCode, AlertTriangle, ShieldOff, Sparkles, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { format, parseISO } from 'date-fns';
 import clsx from 'clsx';
 
@@ -26,6 +27,30 @@ const IncidentDetails = () => {
   const { user } = useAuth();
   const [log, setLog] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
+  const handleAskAI = async () => {
+    setIsAnalyzing(true);
+    setAiError(null);
+    try {
+      const res = await client.post('/ai/analyze', {
+        message: log.message,
+        stack_trace: log.payload?.stack_trace || log.payload?.stackTrace,
+        context: log.payload
+      });
+      if (res.data.success) {
+        setAiAnalysis(res.data.analysis);
+      } else {
+        setAiError(res.data.message || 'Failed to analyze error');
+      }
+    } catch (err) {
+      setAiError(err.response?.data?.message || 'An error occurred while contacting AI service');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   useEffect(() => {
     const fetchLogDetails = async () => {
@@ -114,6 +139,9 @@ const IncidentDetails = () => {
         </div>
       </div>
 
+
+
+
       {/* Payload Data — hidden for guests */}
       {isGuest ? (
         <div className="glass-panel p-8 text-center">
@@ -138,6 +166,56 @@ const IncidentDetails = () => {
             </div>
           </div>
         )
+      )}
+
+      {/* AI Analysis Section — hidden for guests */}
+      {!isGuest && (
+        <div className="glass-panel overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-purple-500/5 pointer-events-none"></div>
+          <div className="px-6 py-4 border-b border-slate-700/50 flex items-center justify-between relative">
+            <div className="flex items-center">
+              <Sparkles className="w-5 h-5 text-brand-500 mr-2" />
+              <h2 className="text-lg font-semibold text-white">AI Analysis</h2>
+            </div>
+            {!aiAnalysis && !isAnalyzing && (
+              <button 
+                onClick={handleAskAI}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500/10 text-brand-500 font-medium hover:bg-brand-500/20 hover:text-brand-100 border border-brand-500/20 transition-all text-sm shadow-lg shadow-brand-500/10"
+              >
+                <Sparkles className="w-4 h-4" />
+                Ask Gemini to Analyze
+              </button>
+            )}
+          </div>
+          
+          <div className="p-6 relative">
+            {isAnalyzing ? (
+              <div className="flex flex-col items-center justify-center py-8 text-brand-500">
+                <Loader2 className="w-8 h-8 animate-spin mb-4" />
+                <p className="text-sm font-medium animate-pulse">Gemini is analyzing the incident...</p>
+              </div>
+            ) : aiError ? (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 flex flex-col items-center text-center">
+                <AlertTriangle className="w-8 h-8 mb-2 opacity-80" />
+                <p className="font-medium">{aiError}</p>
+                <button 
+                  onClick={handleAskAI}
+                  className="mt-4 px-4 py-1.5 text-xs font-semibold bg-red-500/20 rounded-md hover:bg-red-500/30 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : aiAnalysis ? (
+              <div className="markdown-content text-slate-300">
+                <ReactMarkdown>{aiAnalysis}</ReactMarkdown>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                <p>Click the button above to get an AI-generated explanation and proposed fix for this error.</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
