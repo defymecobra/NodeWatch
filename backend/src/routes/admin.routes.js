@@ -23,6 +23,7 @@ const {
   deleteUser,
   cleanupLogs,
 } = require('../controllers/admin.controller');
+const { getConfig, updateConfig } = require('../controllers/config.controller');
 
 const router = Router();
 
@@ -54,5 +55,9 @@ router.delete('/users/:id', requireAdmin, deleteUser);
 
 // Data Retention
 router.delete('/logs/cleanup', requireAdmin, cleanupLogs);
+
+// Server Config
+router.get('/config', requireAdmin, getConfig);
+router.patch('/config', requireAdmin, updateConfig);
 
 module.exports = router;

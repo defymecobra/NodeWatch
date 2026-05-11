@@ -7,9 +7,7 @@
  */
 const crypto = require('crypto');
 const db     = require('../db');
-
-// Time window for deduplication (in seconds)
-const DEDUP_WINDOW_SECONDS = 60;
+const configService = require('./config');
 
 /**
  * Generate an MD5 hash from the error message and stack trace.
@@ -47,15 +45,17 @@ async function processLog(logData) {
   const stack = payload?.stack || '';
   const errorHash = generateHash(message, stack);
 
+  const dedupWindow = parseInt(configService.get('dedup_window_seconds', '60'));
+
   // Step 1: Try to find an existing duplicate within the time window
   const duplicateResult = await db.query(
     `SELECT id, occurrence_count
      FROM error_logs
      WHERE error_hash  = $1
        AND project_id  = $2
-       AND last_seen_at > NOW() - INTERVAL '${DEDUP_WINDOW_SECONDS} seconds'
+       AND last_seen_at > NOW() - ($3 || ' seconds')::INTERVAL
      LIMIT 1`,
-    [errorHash, project_id]
+    [errorHash, project_id, dedupWindow]
   );
 
   // Step 2a: Duplicate found → update
@@ -93,5 +93,4 @@ async function processLog(logData) {
 module.exports = {
   processLog,
   generateHash,
-  DEDUP_WINDOW_SECONDS,
 };

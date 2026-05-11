@@ -7,6 +7,10 @@ const cors    = require('cors');
 require('./db');
 
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const configService = require('./services/config');
+
+// Load dynamic config from DB
+configService.loadFromDb();
 
 const app  = express();
 const PORT = process.env.PORT || 3000;

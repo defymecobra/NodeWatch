@@ -7,17 +7,27 @@
 const TelegramBot = require('node-telegram-bot-api');
 const https = require('https');
 const db = require('../db');
+const configService = require('./config');
 
-const token = process.env.TELEGRAM_BOT_TOKEN;
-const DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://localhost:5173';
 let bot = null;
+let currentToken = null;
 
-if (token) {
-  // Initialize Telegram bot (polling: false because we only send messages, not receive)
-  bot = new TelegramBot(token, { polling: false });
-  console.log('✅ Telegram Bot configured for alerts');
-} else {
-  console.log('⚠️ TELEGRAM_BOT_TOKEN not provided. Telegram alerts are disabled.');
+/**
+ * Get or initialize the Telegram bot instance.
+ */
+function getBot() {
+  const token = configService.get('telegram_bot_token');
+  
+  if (!token) return null;
+  
+  // If token changed, re-initialize
+  if (token !== currentToken) {
+    currentToken = token;
+    bot = new TelegramBot(token, { polling: false });
+    console.log('✅ Telegram Bot (re)configured with dynamic token');
+  }
+  
+  return bot;
 }
 
 // Map levels to numeric weights for comparison
@@ -61,8 +71,11 @@ async function processAlerts(project, log, isDuplicate) {
 
       // Check if log level meets or exceeds the minimum level required for this alert
       if (logWeight >= configWeight) {
-        if (config.channel === 'telegram' && bot) {
-          await sendTelegramAlert(config.recipient_id, project.name, log);
+        if (config.channel === 'telegram') {
+          const activeBot = getBot();
+          if (activeBot) {
+            await sendTelegramAlert(config.recipient_id, project.name, log, activeBot);
+          }
         } else if (config.channel === 'discord') {
           await sendDiscordAlert(config.recipient_id, project.name, log);
         }
@@ -80,7 +93,7 @@ async function processAlerts(project, log, isDuplicate) {
  * @param {string} projectName - Name of the project
  * @param {Object} log - The log entry
  */
-async function sendTelegramAlert(chatId, projectName, log) {
+async function sendTelegramAlert(chatId, projectName, log, activeBot) {
   const emoji = log.level === 'critical' ? '🚨' :
                 log.level === 'error'    ? '❌' :
                 log.level === 'warn'     ? '⚠️' : 'ℹ️';
@@ -88,7 +101,7 @@ async function sendTelegramAlert(chatId, projectName, log) {
   const message = `${emoji} *NodeWatch Alert*\n*Project:* ${projectName}\n*Level:* ${log.level.toUpperCase()}\n\n*Message:*\n\`\`\`text\n${log.message}\n\`\`\``;
 
   try {
-    await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+    await activeBot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (err) {
     console.error(`❌ Telegram alert failed for chat ${chatId}:`, err.message);
   }
@@ -119,7 +132,7 @@ async function sendDiscordAlert(webhookUrl, projectName, log) {
       ],
       footer: { text: 'NodeWatch Monitoring' },
       timestamp: new Date().toISOString(),
-      url: `${DASHBOARD_URL}/incidents/${log.id}`
+      url: `${configService.get('dashboard_url', 'http://localhost:5173')}/incidents/${log.id}`
     }]
   });
 

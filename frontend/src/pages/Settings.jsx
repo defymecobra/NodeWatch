@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   FolderPlus, Trash2, Key, Plus, Bell, Users as UsersIcon,
   Database, Copy, AlertTriangle, Pencil, X, Send, Hash, ChevronDown,
+  Settings2, Eye, EyeOff,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -720,6 +721,98 @@ const RetentionTab = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TAB 5: SERVER CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+const ServerConfigTab = () => {
+  const [config, setConfig] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showKeys, setShowKeys] = useState({});
+
+  const fetchConfig = async () => {
+    try {
+      const res = await client.get('/admin/config');
+      if (res.data.success) setConfig(res.data.config);
+    } catch (err) {
+      toast.error('Failed to load server config');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchConfig(); }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await client.patch('/admin/config', config);
+      toast.success('Configuration saved!');
+      fetchConfig();
+    } catch (err) {
+      toast.error('Failed to save configuration');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) return <div className="text-slate-500 text-sm animate-pulse">Loading config...</div>;
+
+  const configLabels = {
+    dedup_window_seconds: 'Deduplication Window (sec)',
+    alert_cooldown_seconds: 'Alert Cooldown (sec)',
+    data_retention_days: 'Retention (days)',
+    max_payload_size_kb: 'Max Payload (KB)',
+    gemini_api_key: 'Google Gemini API Key',
+    telegram_bot_token: 'Telegram Bot Token',
+  };
+
+  return (
+    <div className="glass-panel pt-3 pb-6 px-6 max-w-2xl space-y-4 relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-12 bg-brand-500/5 blur-3xl rounded-full -mr-12 -mt-12 pointer-events-none"></div>
+      
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Server Configuration</h3>
+          <p className="text-sm text-slate-400">Manage global system parameters without restarting.</p>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="btn-primary px-8 py-2.5 shadow-lg shadow-brand-500/20"
+        >
+          {isSaving ? 'Saving...' : 'Save Config'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-2 relative">
+        {Object.entries(configLabels).map(([key, label]) => (
+          <div key={key} className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{label}</label>
+            <div className="relative group">
+              <input
+                type={key.includes('key') || key.includes('token') ? (showKeys[key] ? 'text' : 'password') : 'text'}
+                value={config[key] || ''}
+                onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
+                className="w-full px-4 py-2.5 bg-dark-900/50 border border-slate-700/50 rounded-xl text-white text-sm outline-none focus:border-brand-500/50 focus:bg-dark-900/80 transition-all placeholder:text-slate-600"
+                placeholder={key.includes('key') ? 'Enter API Key...' : '0'}
+              />
+              {(key.includes('key') || key.includes('token')) && (
+                <button
+                  onClick={() => setShowKeys({ ...showKeys, [key]: !showKeys[key] })}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  {showKeys[key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN SETTINGS PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 const Settings = () => {
@@ -731,6 +824,7 @@ const Settings = () => {
     { key: 'alerts', label: 'Alerts', icon: Bell, roles: ['admin', 'developer'] },
     { key: 'users', label: 'Users', icon: UsersIcon, roles: ['admin'] },
     { key: 'retention', label: 'Data Retention', icon: Database, roles: ['admin'] },
+    { key: 'config', label: 'Server Config', icon: Settings2, roles: ['admin'] },
   ];
 
   const tabs = allTabs.filter(t => t.roles.includes(user?.role));
@@ -761,6 +855,7 @@ const Settings = () => {
         {activeTab === 'alerts' && <AlertsTab />}
         {activeTab === 'users' && <UsersTab />}
         {activeTab === 'retention' && <RetentionTab />}
+        {activeTab === 'config' && <ServerConfigTab />}
       </div>
     </div>
   );
