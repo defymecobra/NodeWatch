@@ -5,7 +5,7 @@ import StatsCard from '../components/StatsCard';
 import ErrorsChart from '../components/ErrorsChart';
 import IncidentsTable from '../components/IncidentsTable';
 import AdminControls from '../components/AdminControls';
-import { AlertTriangle, Activity, DatabaseZap, Clock, ArrowRight, BarChart3, Cpu, Server, Database } from 'lucide-react';
+import { AlertTriangle, Activity, DatabaseZap, Clock, ArrowRight, BarChart3, Cpu, Server, Database, Globe, Sparkles } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const LEVEL_COLORS = { critical: '#ef4444', error: '#f97316', warn: '#eab308', info: '#3b82f6' };
@@ -220,7 +220,52 @@ const Dashboard = () => {
             />
           </div>
 
-          {/* Monitoring CTA Banner */}
+          {/* Feature Banners Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Uptime Banner */}
+            <Link to="/uptime" className="relative group overflow-hidden rounded-xl border border-emerald-500/20 bg-dark-800/80 hover:border-emerald-500/50 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-brand-500/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all"></div>
+              
+              <div className="relative p-6 flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                  <div className="h-14 w-14 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 group-hover:scale-110 transition-transform">
+                    <Globe className="w-7 h-7 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">Service Uptime</h3>
+                    <p className="text-xs text-slate-400 mt-1 max-w-[200px] sm:max-w-none">Monitor real-time availability and response times for all your fleet.</p>
+                  </div>
+                </div>
+                <div className="hidden sm:flex shrink-0 w-10 h-10 rounded-full bg-emerald-500/10 items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                  <ArrowRight className="w-5 h-5" />
+                </div>
+              </div>
+            </Link>
+
+            {/* AI Advisor Banner */}
+            <Link to="/advisor" className="relative group overflow-hidden rounded-xl border border-purple-500/20 bg-dark-800/80 hover:border-purple-500/50 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-brand-500/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all"></div>
+              
+              <div className="relative p-6 flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                  <div className="h-14 w-14 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-7 h-7 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-purple-300 transition-colors">AI Advisor</h3>
+                    <p className="text-xs text-slate-400 mt-1 max-w-[200px] sm:max-w-none">Get deep architectural insights and root cause analysis powered by AI.</p>
+                  </div>
+                </div>
+                <div className="hidden sm:flex shrink-0 w-10 h-10 rounded-full bg-purple-500/10 items-center justify-center text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all">
+                  <ArrowRight className="w-5 h-5" />
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* System Monitoring CTA Banner */}
           <Link to="/monitoring" className="block relative group overflow-hidden rounded-xl border border-brand-500/20 bg-dark-800/80 hover:border-brand-500/50 transition-all duration-300">
             <div className="absolute inset-0 bg-gradient-to-r from-brand-500/10 to-emerald-500/10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
             <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-brand-500/10 to-transparent pointer-events-none"></div>
