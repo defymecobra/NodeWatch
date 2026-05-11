@@ -112,7 +112,7 @@ const Dashboard = () => {
         const res = await client.get('/dashboard/projects');
         if (res.data.success && res.data.projects.length > 0) {
           setProjects(res.data.projects);
-          setSelectedProjectId(res.data.projects[0].id);
+          setSelectedProjectId('all'); // Default to All Projects
         }
       } catch (err) {
         console.error('Failed to fetch projects', err);
@@ -149,31 +149,40 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header & Project Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-4 border-b border-white/5">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard Overview</h1>
-          <p className="text-slate-400 text-sm mt-1">Real-time error monitoring and analytics</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Dashboard Overview</h1>
+          <p className="text-slate-400 text-sm mt-1.5">Real-time error monitoring and cross-project analytics</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          {projects.length > 0 && (
+            <div className="relative group min-w-[240px]">
+              <div className="absolute inset-0 bg-brand-500/20 blur-xl rounded-xl group-hover:bg-brand-500/30 transition-all duration-300"></div>
+              <div className="relative flex items-center bg-dark-800/80 border border-brand-500/30 rounded-xl overflow-hidden backdrop-blur-sm hover:border-brand-500/50 transition-colors">
+                <div className="pl-4 pr-2 py-3 flex items-center text-brand-400">
+                  <DatabaseZap className="w-5 h-5" />
+                </div>
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="bg-transparent text-white font-medium text-base appearance-none py-3 pr-10 pl-2 outline-none cursor-pointer w-full"
+                >
+                  <option value="all" className="bg-dark-900 text-brand-400 font-semibold">All Projects</option>
+                  <option disabled className="bg-dark-900 text-slate-500">──────────</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id} className="bg-dark-900 text-slate-200">{p.name}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 pointer-events-none text-brand-400/70 group-hover:text-brand-400 transition-colors">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
           <TestEventButton projectId={selectedProjectId} onEventSent={() => setRefreshKey(k => k + 1)} />
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="bg-dark-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none"
-            disabled={projects.length === 0}
-          >
-            {projects.length === 0 ? (
-              <option value="">No projects found</option>
-            ) : (
-              <>
-                <option value="all">All Projects</option>
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </>
-            )}
-          </select>
         </div>
       </div>
 

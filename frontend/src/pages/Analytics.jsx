@@ -3,7 +3,7 @@ import client from '../api/client';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import HeatmapChart from '../components/HeatmapChart';
 import HealthScore from '../components/HealthScore';
-import { TrendingUp, Clock, BarChart3, Activity } from 'lucide-react';
+import { TrendingUp, Clock, BarChart3, Activity, DatabaseZap } from 'lucide-react';
 import clsx from 'clsx';
 
 const RANGES = [
@@ -115,23 +115,37 @@ const Analytics = () => {
   return (
     <div className="space-y-6">
       {/* Header + Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-4 border-b border-white/5">
         <div>
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-slate-400 text-sm mt-1">Cross-project insights and error patterns</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Analytics</h1>
+          <p className="text-slate-400 text-sm mt-1.5">Cross-project insights and error patterns</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           {/* Project Selector */}
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="bg-dark-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none"
-          >
-            <option value="all">All Projects</option>
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+          <div className="relative group min-w-[240px]">
+            <div className="absolute inset-0 bg-brand-500/20 blur-xl rounded-xl group-hover:bg-brand-500/30 transition-all duration-300"></div>
+            <div className="relative flex items-center bg-dark-800/80 border border-brand-500/30 rounded-xl overflow-hidden backdrop-blur-sm hover:border-brand-500/50 transition-colors">
+              <div className="pl-4 pr-2 py-3 flex items-center text-brand-400">
+                <DatabaseZap className="w-5 h-5" />
+              </div>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                className="bg-transparent text-white font-medium text-base appearance-none py-3 pr-10 pl-2 outline-none cursor-pointer w-full"
+              >
+                <option value="all" className="bg-dark-900 text-brand-400 font-semibold">All Projects</option>
+                <option disabled className="bg-dark-900 text-slate-500">──────────</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id} className="bg-dark-900 text-slate-200">{p.name}</option>
+                ))}
+              </select>
+              <div className="absolute right-4 pointer-events-none text-brand-400/70 group-hover:text-brand-400 transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
           {/* Range Selector */}
           <div className="flex gap-2">
             {RANGES.map(r => (

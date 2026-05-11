@@ -122,46 +122,64 @@ const generateTestEvent = async (req, res, next) => {
       });
     }
 
-    // Verify project exists
-    const projectCheck = await db.query(
-      `SELECT id, name FROM projects WHERE id = $1`,
-      [project_id]
-    );
+    let projects = [];
 
-    if (projectCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Project not found.',
+    if (project_id === 'all') {
+      // Fetch all projects
+      const allProjects = await db.query(`SELECT id, name FROM projects`);
+      projects = allProjects.rows;
+      if (projects.length === 0) {
+        return res.status(404).json({ success: false, error: 'No projects found.' });
+      }
+    } else {
+      // Verify specific project exists
+      const projectCheck = await db.query(
+        `SELECT id, name FROM projects WHERE id = $1`,
+        [project_id]
+      );
+      if (projectCheck.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Project not found.' });
+      }
+      projects = [projectCheck.rows[0]];
+    }
+
+    const generatedLogs = [];
+
+    // Generate event for each project
+    for (const project of projects) {
+      const baseEvent = TEST_EVENTS[Math.floor(Math.random() * TEST_EVENTS.length)];
+      
+      // Append a unique timestamp to the message so it's NEVER deduplicated,
+      // guaranteeing that processAlerts treats it as a new error and sends the Telegram alert instantly.
+      const uniqueMessage = `[TEST ${new Date().toISOString()}] ${baseEvent.message}`;
+
+      const result = await processLog({
+        project_id: project.id,
+        level: baseEvent.level,
+        message: uniqueMessage,
+        payload: baseEvent.payload,
+      });
+
+      // Trigger alerts asynchronously (always pass false for isDuplicate since it's unique)
+      processAlerts(
+        { id: project.id, name: project.name },
+        result.log,
+        false
+      ).catch((err) => console.error('Alert processing error:', err));
+
+      generatedLogs.push({
+        project_name: project.name,
+        level: result.log.level,
+        message: result.log.message
       });
     }
 
-    // Pick a random test event
-    const event = TEST_EVENTS[Math.floor(Math.random() * TEST_EVENTS.length)];
-
-    // Process it through the normal deduplication pipeline
-    const result = await processLog({
-      project_id,
-      level: event.level,
-      message: event.message,
-      payload: event.payload,
-    });
-
-    // Trigger alerts asynchronously
-    processAlerts(
-      { id: project_id, name: projectCheck.rows[0].name },
-      result.log,
-      result.isDuplicate
-    ).catch((err) => console.error('Alert processing error:', err));
-
     res.status(201).json({
       success: true,
-      isDuplicate: result.isDuplicate,
-      log: {
-        id:               result.log.id,
-        level:            result.log.level,
-        message:          result.log.message,
-        occurrence_count: result.log.occurrence_count,
-      },
+      isDuplicate: false,
+      message: `Generated ${generatedLogs.length} test events.`,
+      log: generatedLogs[0], // Keep for backward compatibility with frontend toast
+      logs: generatedLogs
     });
   } catch (err) {
     next(err);

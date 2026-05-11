@@ -97,12 +97,10 @@ CREATE TABLE IF NOT EXISTS alert_configs (
 -- ================================================
 -- SEED DATA
 -- Creates a default admin user (password: admin123)
--- and a sample project for testing.
+-- and 3 sample projects for testing.
 -- ================================================
 
 -- Default admin user (password: 'admin123')
--- IMPORTANT: This hash was generated with Node.js bcrypt (10 rounds).
--- To regenerate: node -e "require('bcrypt').hash('admin123',10).then(h=>console.log(h))"
 INSERT INTO users (id, email, password_hash, role)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
@@ -111,20 +109,38 @@ VALUES (
     'admin'
 ) ON CONFLICT (email) DO NOTHING;
 
--- Default demo project
-INSERT INTO projects (id, name, owner_id)
-VALUES (
+-- Project 1: E-Commerce API
+INSERT INTO projects (id, name, owner_id) VALUES (
     'b0000000-0000-0000-0000-000000000001',
-    'Demo Project',
+    'E-Commerce API',
     'a0000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+INSERT INTO api_keys (project_id, key_hash, label) VALUES (
+    'b0000000-0000-0000-0000-000000000001',
+    encode(sha256('ecommerce-api-key'::bytea), 'hex'),
+    'E-Commerce Key'
 ) ON CONFLICT DO NOTHING;
 
--- Default API key for demo project
--- Raw key: "demo-api-key-do-not-use-in-production"
--- SHA-256: d41d8cd98f00b204e9800998ecf8427e (placeholder, will be regenerated)
-INSERT INTO api_keys (project_id, key_hash, label)
-VALUES (
-    'b0000000-0000-0000-0000-000000000001',
-    encode(sha256('demo-api-key-do-not-use-in-production'::bytea), 'hex'),
-    'Demo Key'
+-- Project 2: Student Portal
+INSERT INTO projects (id, name, owner_id) VALUES (
+    'b0000000-0000-0000-0000-000000000002',
+    'Student Portal',
+    'a0000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+INSERT INTO api_keys (project_id, key_hash, label) VALUES (
+    'b0000000-0000-0000-0000-000000000002',
+    encode(sha256('student-portal-key'::bytea), 'hex'),
+    'Student Portal Key'
+) ON CONFLICT DO NOTHING;
+
+-- Project 3: IoT Sensor Hub
+INSERT INTO projects (id, name, owner_id) VALUES (
+    'b0000000-0000-0000-0000-000000000003',
+    'IoT Sensor Hub',
+    'a0000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+INSERT INTO api_keys (project_id, key_hash, label) VALUES (
+    'b0000000-0000-0000-0000-000000000003',
+    encode(sha256('iot-sensor-hub-key'::bytea), 'hex'),
+    'IoT Sensor Hub Key'
 ) ON CONFLICT DO NOTHING;

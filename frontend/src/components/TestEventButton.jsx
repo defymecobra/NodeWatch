@@ -16,11 +16,15 @@ const TestEventButton = ({ projectId, onEventSent }) => {
     try {
       const res = await client.post('/logs/test', { project_id: projectId });
       if (res.data.success) {
-        const log = res.data.log;
-        toast.success(
-          `Test event sent: [${log.level.toUpperCase()}] ${log.message.substring(0, 50)}...`,
-          { duration: 3000 }
-        );
+        if (res.data.logs && res.data.logs.length > 1) {
+          toast.success(`Sent ${res.data.logs.length} test events across all projects!`, { duration: 3000 });
+        } else {
+          const log = res.data.log;
+          toast.success(
+            `Test event sent: [${log.level.toUpperCase()}] ${log.message.substring(0, 40)}...`,
+            { duration: 3000 }
+          );
+        }
         if (onEventSent) onEventSent();
       }
     } catch (err) {

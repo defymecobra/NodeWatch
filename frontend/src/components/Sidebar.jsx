@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { LayoutDashboard, AlertCircle, Settings as SettingsIcon, LogOut, ShieldAlert, Menu, X, Pencil, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
@@ -39,12 +39,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       >
         {/* Brand */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center hover:opacity-80 transition-opacity cursor-pointer" onClick={onClose}>
             <ShieldAlert className="w-8 h-8 text-brand-500 mr-3" />
             <span className="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
               NodeWatch
             </span>
-          </div>
+          </Link>
           <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-white">
             <X className="w-5 h-5" />
           </button>
