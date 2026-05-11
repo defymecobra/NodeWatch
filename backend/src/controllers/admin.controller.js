@@ -105,7 +105,7 @@ const getProjectKeys = async (req, res, next) => {
     const { id } = req.params;
 
     const result = await db.query(
-      `SELECT id, label, is_active, created_at
+      `SELECT id, label, is_active, created_at, key_display
        FROM api_keys
        WHERE project_id = $1
        ORDER BY created_at DESC`,
@@ -153,10 +153,10 @@ const generateApiKey = async (req, res, next) => {
       .digest('hex');
 
     const result = await db.query(
-      `INSERT INTO api_keys (project_id, key_hash, label)
-       VALUES ($1, $2, $3)
+      `INSERT INTO api_keys (project_id, key_hash, key_display, label)
+       VALUES ($1, $2, $3, $4)
        RETURNING id, label, is_active, created_at`,
-      [id, keyHash, (label || 'default').trim()]
+      [id, keyHash, rawKey, (label || 'default').trim()]
     );
 
     res.status(201).json({
@@ -178,11 +178,20 @@ const generateApiKey = async (req, res, next) => {
 const deactivateKey = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { hard } = req.query;
 
-    const result = await db.query(
-      `UPDATE api_keys SET is_active = false WHERE id = $1 RETURNING id, label`,
-      [id]
-    );
+    let result;
+    if (hard === 'true') {
+      result = await db.query(
+        `DELETE FROM api_keys WHERE id = $1 RETURNING id, label`,
+        [id]
+      );
+    } else {
+      result = await db.query(
+        `UPDATE api_keys SET is_active = false WHERE id = $1 RETURNING id, label`,
+        [id]
+      );
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({

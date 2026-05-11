@@ -277,12 +277,6 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* Heatmap */}
-          <div className="glass-panel p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Error Heatmap (Day × Hour)</h2>
-            <HeatmapChart matrix={heatmap?.matrix} maxCount={heatmap?.maxCount || 0} />
-          </div>
-
           {/* Health Scores */}
           {health.length > 0 && (
             <div>
@@ -341,6 +335,12 @@ const Analytics = () => {
             ) : (
               <div className="p-6 text-center text-slate-500">No errors in this period</div>
             )}
+          </div>
+
+          {/* Heatmap */}
+          <div className="glass-panel p-4 sm:p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Error Heatmap (Day × Hour)</h2>
+            <HeatmapChart matrix={heatmap?.matrix} maxCount={heatmap?.maxCount || 0} />
           </div>
         </>
       )}

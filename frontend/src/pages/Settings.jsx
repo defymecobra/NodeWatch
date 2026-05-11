@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   FolderPlus, Trash2, Key, Plus, Bell, Users as UsersIcon,
   Database, Copy, AlertTriangle, Pencil, X, Send, Hash, ChevronDown,
-  Settings2, Eye, EyeOff,
+  Settings2, Eye, EyeOff, Activity,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -34,6 +34,7 @@ const ProjectsTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [projectKeys, setProjectKeys] = useState({}); // { projectId: [keys] }
   const [expandedProject, setExpandedProject] = useState(null);
+  const [visibleKeys, setVisibleKeys] = useState({}); // { keyId: boolean }
 
   const fetchProjects = async () => {
     try {
@@ -71,13 +72,15 @@ const ProjectsTab = () => {
   };
 
   const handleGenerateKey = async (projectId) => {
+    const label = window.prompt('Enter a label for this key (e.g. Production, Staging):', 'Generated Key');
+    if (label === null) return; // User cancelled
+
     try {
-      const res = await client.post(`/admin/projects/${projectId}/keys`, { label: 'Generated Key' });
+      const res = await client.post(`/admin/projects/${projectId}/keys`, { label: label.trim() || 'Generated Key' });
       if (res.data.success) {
         const rawKey = res.data.key.raw_key;
         await navigator.clipboard.writeText(rawKey);
-        toast.success('API Key generated and copied to clipboard!', { duration: 5000 });
-        // Refresh keys for this project
+        toast.success(`Key "${res.data.key.label}" copied to clipboard!`, { duration: 5000 });
         fetchKeysForProject(projectId);
       }
     } catch (err) {
@@ -95,13 +98,29 @@ const ProjectsTab = () => {
   };
 
   const handleDeactivateKey = async (keyId, projectId) => {
+    if (!window.confirm('Are you sure you want to revoke this key? Clients using it will stop working.')) return;
     try {
       await client.delete(`/admin/keys/${keyId}`);
-      toast.success('API Key deactivated');
+      toast.success('Key revoked');
       fetchKeysForProject(projectId);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to deactivate key');
+      toast.error('Failed to revoke key');
     }
+  };
+
+  const handleDeleteKey = async (keyId, projectId) => {
+    if (!window.confirm('Permanently delete this key record?')) return;
+    try {
+      await client.delete(`/admin/keys/${keyId}?hard=true`);
+      toast.success('Key deleted');
+      fetchKeysForProject(projectId);
+    } catch (err) {
+      toast.error('Failed to delete key');
+    }
+  };
+
+  const toggleKeyVisibility = (keyId) => {
+    setVisibleKeys(prev => ({ ...prev, [keyId]: !prev[keyId] }));
   };
 
   const toggleExpand = (projectId) => {
@@ -132,6 +151,27 @@ const ProjectsTab = () => {
         <button onClick={handleCreate} className="btn-primary flex items-center gap-2">
           <FolderPlus className="w-4 h-4" /> Create
         </button>
+      </div>
+
+      {/* Help Block */}
+      <div className="bg-brand-500/5 border border-brand-500/20 rounded-xl p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-brand-500/10 text-brand-400">
+            <Activity className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-white mb-1">How to Connect?</h3>
+            <p className="text-xs text-slate-400 leading-relaxed mb-3">
+              To send logs from your app, use the <strong>X-API-Key</strong> header with your generated key.
+              Logs should be sent as JSON to <code>{window.location.origin}/api/v1/logs</code>.
+            </p>
+            <div className="bg-dark-900/50 rounded-lg p-2.5 font-mono text-[10px] text-brand-300 border border-white/5">
+              curl -X POST {window.location.origin}/api/v1/logs \<br/>
+              &nbsp;&nbsp;-H "X-API-Key: YOUR_KEY" \<br/>
+              &nbsp;&nbsp;-d {'\'{"level": "error", "message": "Hello NodeWatch!"}\''}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Project List */}
@@ -177,21 +217,64 @@ const ProjectsTab = () => {
                 {projectKeys[p.id]?.length > 0 ? (
                   <div className="space-y-2">
                     {projectKeys[p.id].map(k => (
-                      <div key={k.id} className="flex items-center justify-between p-2 rounded-lg bg-dark-800/50 text-xs">
-                        <div>
-                          <span className="text-slate-300 font-medium">{k.label}</span>
-                          <span className={clsx("ml-2 px-1.5 py-0.5 rounded", k.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400')}>
-                            {k.is_active ? 'Active' : 'Inactive'}
-                          </span>
+                      <div key={k.id} className="flex items-center justify-between p-2 rounded-lg bg-dark-800/50 text-xs border border-white/5">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-300 font-medium">{k.label}</span>
+                            <button 
+                              onClick={() => toggleKeyVisibility(k.id)}
+                              className="text-slate-500 hover:text-slate-300 transition-colors"
+                              title={visibleKeys[k.id] ? "Hide Key" : "Show Key"}
+                            >
+                              {visibleKeys[k.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <code className="text-[10px] font-mono text-brand-400/80">
+                              {visibleKeys[k.id] 
+                                ? (k.key_display || 'Key value hidden') 
+                                : '••••••••••••••••••••••••••••••••'
+                              }
+                            </code>
+                            <span className={clsx(
+                              "px-1.5 py-0.5 rounded text-[9px] font-medium", 
+                              k.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                            )}>
+                              {k.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
                         </div>
-                        {k.is_active && (
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleDeactivateKey(k.id, p.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
+                            onClick={() => {
+                              if (k.key_display) {
+                                navigator.clipboard.writeText(k.key_display);
+                                toast.success('Key copied to clipboard');
+                              }
+                            }}
+                            className="p-1 rounded hover:bg-white/5 text-slate-500 hover:text-brand-400 transition-colors"
+                            title="Copy Key"
                           >
-                            Revoke
+                            <Copy className="w-3 h-3" />
                           </button>
-                        )}
+                          {k.is_active ? (
+                            <button
+                              onClick={() => handleDeactivateKey(k.id, p.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                              title="Revoke Key"
+                            >
+                              Revoke
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteKey(k.id, p.id)}
+                              className="text-slate-500 hover:text-red-400 transition-colors"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
