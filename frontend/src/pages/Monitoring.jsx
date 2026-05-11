@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Activity, Server, Cpu, Database, HardDrive, Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import client from '../api/client';
@@ -41,6 +41,77 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+const GaugeCard = ({ title, value, max = 100, unit = '%', icon: Icon, subtitle, color }) => {
+  const radius = 45;
+  const stroke = 8;
+  const normalizedValue = Math.min(Math.max(value, 0), max);
+  const percentage = (normalizedValue / max) * 100;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  // Determine color based on value percentage
+  const getStatusColor = (p) => {
+    if (p < 60) return '#10b981'; // emerald-500
+    if (p < 85) return '#f59e0b'; // amber-500
+    return '#f43f5e'; // rose-500
+  };
+
+  const currentColor = color || getStatusColor(percentage);
+
+  return (
+    <div className="bg-dark-800/50 border border-white/5 rounded-xl p-6 flex flex-col items-center text-center group hover:border-brand-500/30 transition-all duration-500">
+      <div className="relative w-32 h-32 flex items-center justify-center">
+        {/* Background Circle */}
+        <svg className="absolute w-full h-full -rotate-90">
+          <circle
+            cx="64"
+            cy="64"
+            r={radius}
+            fill="transparent"
+            stroke="rgba(255,255,255,0.05)"
+            strokeWidth={stroke}
+          />
+          {/* Progress Circle */}
+          <circle
+            cx="64"
+            cy="64"
+            r={radius}
+            fill="transparent"
+            stroke={currentColor}
+            strokeWidth={stroke}
+            strokeDasharray={circumference}
+            style={{ 
+              strokeDashoffset,
+              transition: 'stroke-dashoffset 1s ease-in-out, stroke 0.5s ease'
+            }}
+            strokeLinecap="round"
+          />
+        </svg>
+        
+        {/* Center Content */}
+        <div className="z-10 flex flex-col items-center">
+          <Icon className="w-5 h-5 mb-1 text-slate-500 group-hover:text-slate-300 transition-colors" />
+          <span className="text-2xl font-bold text-white tracking-tight">
+            {Math.round(normalizedValue)}
+            <span className="text-sm font-medium text-slate-500 ml-0.5">{unit}</span>
+          </span>
+        </div>
+
+        {/* Glow effect */}
+        <div 
+          className="absolute inset-0 rounded-full blur-2xl opacity-20 transition-opacity duration-1000"
+          style={{ backgroundColor: currentColor }}
+        ></div>
+      </div>
+
+      <div className="mt-4">
+        <h4 className="text-slate-400 text-sm font-medium uppercase tracking-wider">{title}</h4>
+        {subtitle && <p className="text-slate-500 text-[10px] mt-1 font-mono">{subtitle}</p>}
+      </div>
+    </div>
+  );
+};
+
 const MetricCard = ({ title, value, subtitle, icon: Icon, colorClass, highlight = false }) => (
   <div className={clsx(
     "p-6 rounded-xl border flex items-center gap-4 transition-all duration-300",
@@ -75,14 +146,16 @@ const Monitoring = () => {
           
           setData(prev => {
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
             const newPoint = {
               time: now,
               cpu: metrics.server.cpu_usage_percent,
               ramServer: metrics.server.used_mem,
-              ramApp: metrics.process.rss
+              ramApp: metrics.process.rss,
             };
+
             const newData = [...prev, newPoint];
-            if (newData.length > 30) newData.shift(); // Keep last 30 points
+            if (newData.length > 30) newData.shift(); 
             return newData;
           });
         }
@@ -116,30 +189,29 @@ const Monitoring = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <MetricCard
-              title="CPU Usage"
-              value={`${current.server.cpu_usage_percent}%`}
+            <GaugeCard
+              title="CPU Load"
+              value={current.server.cpu_usage_percent}
               subtitle={`Load Avg: ${current.server.load_avg[0].toFixed(2)}`}
               icon={Cpu}
-              colorClass="text-emerald-400"
+            />
+            <GaugeCard
+              title="Server RAM"
+              value={(current.server.used_mem / current.server.total_mem) * 100}
+              unit="%"
+              subtitle={`${formatBytes(current.server.used_mem)} / ${formatBytes(current.server.total_mem)}`}
+              icon={Database}
             />
             <MetricCard
-              title="App Memory (RSS)"
+              title="Process RSS"
               value={formatBytes(current.process.rss)}
-              subtitle="Extremely Lightweight!"
+              subtitle="Current Node process"
               icon={Activity}
               colorClass="text-brand-400"
               highlight={true}
             />
             <MetricCard
-              title="Server RAM Used"
-              value={formatBytes(current.server.used_mem)}
-              subtitle={`Total: ${formatBytes(current.server.total_mem)}`}
-              icon={Database}
-              colorClass="text-amber-400"
-            />
-            <MetricCard
-              title="App Uptime"
+              title="Up Time"
               value={formatUptime(current.process.uptime)}
               subtitle={`Server: ${formatUptime(current.server.uptime)}`}
               icon={Clock}
@@ -199,33 +271,80 @@ const Monitoring = () => {
             </div>
           </div>
 
-          {/* Infrastructure Info */}
-          {current.system_info && (
-            <div className="bg-dark-800/50 border border-white/5 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center">
-                <Server className="w-5 h-5 mr-2 text-slate-400" />
-                Infrastructure & Environment
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Operating System</p>
-                  <p className="text-slate-200 font-medium">{current.system_info.os_platform}</p>
+          {/* High-Density Info Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Node.js Heap Widget */}
+            <div className="bg-dark-800/40 border border-white/5 rounded-xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Memory Heap</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <span className="text-xs text-slate-400">Used</span>
+                  <span className="text-sm font-mono text-white">{formatBytes(current.process.heap_used)}</span>
                 </div>
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Node.js Version</p>
-                  <p className="text-slate-200 font-medium">{current.system_info.node_version}</p>
+                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-brand-500 transition-all duration-1000" 
+                    style={{ width: `${(current.process.heap_used / current.process.heap_total) * 100}%` }}
+                  ></div>
                 </div>
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Database Storage Used</p>
-                  <p className="text-emerald-400 font-medium">{current.system_info.db_size}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Total Logs Processed</p>
-                  <p className="text-brand-400 font-medium">{current.system_info.total_logs.toLocaleString()}</p>
+                <div className="flex justify-between items-center text-[10px] text-slate-500">
+                  <span>Total: {formatBytes(current.process.heap_total)}</span>
+                  <span>{Math.round((current.process.heap_used / current.process.heap_total) * 100)}%</span>
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Database Widget */}
+            <div className="bg-dark-800/40 border border-white/5 rounded-xl p-4">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-3">Database Health</span>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                  <Database className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-white leading-none">{current.system_info.db_size}</div>
+                  <div className="text-[10px] text-slate-500 mt-1 uppercase">Storage Used</div>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+                <span className="text-[10px] text-slate-500 uppercase">Total Records</span>
+                <span className="text-xs font-mono text-emerald-400">{current.system_info.total_logs.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Platform Widget */}
+            <div className="bg-dark-800/40 border border-white/5 rounded-xl p-4">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-3">Environment</span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <HardDrive className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-xs text-slate-300 truncate">{current.system_info.os_platform}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Server className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-xs text-slate-300">Node {current.system_info.node_version}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Status Widget */}
+            <div className="bg-dark-800/40 border border-white/5 rounded-xl p-4 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">System Status</span>
+              <div className="py-2">
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                  <span className="text-sm font-bold uppercase tracking-tight">Healthy</span>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">All services responding normally</p>
+              </div>
+              <div className="text-[10px] text-slate-600 font-mono">
+                Last update: {new Date().toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>

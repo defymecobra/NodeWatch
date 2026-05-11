@@ -470,7 +470,7 @@ const AlertsTab = () => {
                   <span className="text-sm text-white font-medium capitalize">{a.channel}</span>
                   <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">≥ {a.min_level}</span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1 font-mono truncate max-w-[250px]" title={a.recipient_id}>
+                <p className="text-xs text-slate-400 mt-1 font-mono break-all" title={a.recipient_id}>
                   {a.channel === 'telegram' ? 'Chat ID: ' : 'Webhook: '}
                   {a.recipient_id}
                 </p>

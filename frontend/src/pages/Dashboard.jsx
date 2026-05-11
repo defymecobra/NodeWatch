@@ -4,7 +4,7 @@ import client from '../api/client';
 import StatsCard from '../components/StatsCard';
 import ErrorsChart from '../components/ErrorsChart';
 import IncidentsTable from '../components/IncidentsTable';
-import TestEventButton from '../components/TestEventButton';
+import AdminControls from '../components/AdminControls';
 import { AlertTriangle, Activity, DatabaseZap, Clock, ArrowRight, BarChart3, Cpu, Server, Database } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
@@ -182,7 +182,7 @@ const Dashboard = () => {
               </div>
             </div>
           )}
-          <TestEventButton projectId={selectedProjectId} onEventSent={() => setRefreshKey(k => k + 1)} />
+          <AdminControls projectId={selectedProjectId} onEventSent={() => setRefreshKey(k => k + 1)} />
         </div>
       </div>
 
